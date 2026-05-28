@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SalonRoute CRM</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Arial, sans-serif; background:#eef2f7; color:#0f172a; padding:14px; padding-bottom:90px; }
+    .app { max-width:1150px; margin:auto; }
+    .hidden { display:none!important; }
+    .top { background:linear-gradient(135deg,#06b6d4,#2563eb); color:white; border-radius:26px; padding:22px; margin-bottom:14px; box-shadow:0 14px 35px rgba(37,99,235,.22); }
+    .top-row { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    h1,h2,h3 { margin:0; }
+    h1 { font-size:28px; }
+    .sub { opacity:.9; margin-top:5px; }
+    .badge { background:rgba(255,255,255,.18); border-radius:16px; padding:10px 12px; font-weight:700; white-space:nowrap; }
+    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:18px; }
+    .stat { background:rgba(255,255,255,.15); border-radius:18px; padding:12px; }
+    .stat small { display:block; opacity:.85; }
+    .stat strong { display:block; font-size:24px; margin-top:4px; }
+    .card { background:white; border-radius:24px; padding:16px; margin-bottom:14px; box-shadow:0 10px 24px rgba(15,23,42,.07); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .layout { display:grid; grid-template-columns:1.1fr .9fr; gap:14px; align-items:start; }
+    input,select,textarea { width:100%; border:1px solid #dbe3ee; border-radius:16px; padding:12px; font-size:15px; margin:6px 0 10px; background:white; outline:none; }
+    textarea { min-height:92px; resize:vertical; }
+    button { border:0; border-radius:15px; padding:11px 13px; font-weight:800; cursor:pointer; }
+    .primary { background:#2563eb; color:white; }
+    .secondary { background:#e2e8f0; color:#0f172a; }
+    .danger { background:#fee2e2; color:#991b1b; }
+    .success { background:#dcfce7; color:#166534; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .between { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .salon,.report,.user { border:1px solid #e2e8f0; border-radius:20px; padding:13px; margin-top:10px; }
+    .salon.active { border-color:#2563eb; background:#eff6ff; }
+    .muted { color:#64748b; font-size:14px; line-height:1.4; }
+    .tiny { color:#94a3b8; font-size:12px; }
+    .status { display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:800; }
+    .green { background:#dcfce7; color:#166534; }
+    .yellow { background:#fef9c3; color:#854d0e; }
+    .red { background:#fee2e2; color:#991b1b; }
+    .blue { background:#dbeafe; color:#1d4ed8; }
+    .map-wrap { overflow:hidden; border-radius:22px; border:1px solid #dbe3ee; background:#e2e8f0; min-height:360px; }
+    iframe { width:100%; height:420px; border:0; display:block; }
+    .map-info { padding:12px; background:#f8fafc; border-top:1px solid #dbe3ee; }
+    .nav { position:fixed; left:12px; right:12px; bottom:12px; max-width:1150px; margin:auto; background:white; border-radius:24px; padding:10px; display:flex; justify-content:space-around; gap:6px; box-shadow:0 12px 35px rgba(15,23,42,.18); z-index:20; }
+    .nav button { background:transparent; color:#64748b; font-size:13px; padding:9px; }
+    .nav button.active { color:#2563eb; background:#eff6ff; }
+    .section { display:none; }
+    .section.active { display:block; }
+    .login { max-width:440px; margin:50px auto; }
+    .notice { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:18px; padding:12px; margin-bottom:14px; font-size:14px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { border-bottom:1px solid #e2e8f0; text-align:left; padding:10px; vertical-align:top; }
+    th { color:#64748b; }
+    .scroll-list { max-height:620px; overflow:auto; padding-right:4px; }
+    @media(max-width:850px) { .grid,.stats,.layout { grid-template-columns:1fr; } .top-row,.between { flex-direction:column; align-items:flex-start; } .nav { overflow:auto; justify-content:flex-start; } .nav button { white-space:nowrap; } iframe { height:360px; } }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div id="loginScreen" class="login card">
+    <h1>SalonRoute</h1>
+    <p class="muted">Login za vlasnika/admina i komercijaliste</p>
+    <div class="notice">
+      Demo admin: <b>admin@firma.rs</b> / <b>admin123</b><br>
+      Demo komercijalista: <b>pera@firma.rs</b> / <b>123456</b>
+    </div>
+    <input id="loginEmail" placeholder="Email" value="admin@firma.rs">
+    <input id="loginPassword" placeholder="Lozinka" type="password" value="admin123">
+    <button class="primary" style="width:100%" onclick="login()">Uđi u aplikaciju</button>
+  </div>
+
+  <div id="mainApp" class="hidden">
+    <div class="top">
+      <div class="top-row">
+        <div>
+          <h1>SalonRoute CRM</h1>
+          <div class="sub">Mapa, rute, posete, porudžbine i dnevni izveštaji</div>
+        </div>
+        <div>
+          <div class="badge" id="loggedUser">Korisnik</div>
+          <button class="secondary" onclick="logout()" style="margin-top:8px;width:100%">Logout</button>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><small>Saloni</small><strong id="statSalons">0</strong></div>
+        <div class="stat"><small>Posete</small><strong id="statVisits">0</strong></div>
+        <div class="stat"><small>Porudžbine</small><strong id="statOrders">0</strong></div>
+        <div class="stat"><small>Promet</small><strong id="statRevenue">0</strong></div>
+      </div>
+    </div>
+
+    <div id="blockedBox" class="notice hidden">Ovaj nalog je blokiran. Kontaktiraj vlasnika aplikacije.</div>
+
+    <section id="Mapa" class="section active">
+      <div class="layout">
+        <div class="card">
+          <div class="between">
+            <h2>Učitana Google mapa</h2>
+            <button class="primary" onclick="openSelectedMap()">Navigacija</button>
+          </div>
+          <div class="map-wrap">
+            <iframe id="mapFrame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            <div class="map-info">
+              <b id="mapSalonName">Salon</b>
+              <div class="muted" id="mapSalonAddress">Adresa</div>
+              <div class="row" style="margin-top:10px">
+                <button class="secondary" onclick="openSelectedMap()">Otvori u Google Maps</button>
+                <button class="primary" onclick="quickVisit(selectedSalonId)">Unos posete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="between">
+            <h2>Saloni</h2>
+            <button class="primary" onclick="openDailyRoute()">Ruta 10 salona</button>
+          </div>
+          <input id="searchSalon" placeholder="Pretraga salona/adrese..." oninput="renderSalons()">
+          <div class="muted">Klikni salon da se mapa učita. Zbog Google limita, dnevna ruta otvara prvih 10 filtriranih salona.</div>
+          <div id="mapSalonList" class="scroll-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="Rute" class="section">
+      <div class="card">
+        <div class="between">
+          <h2>Dnevna ruta</h2>
+          <button class="primary" onclick="openDailyRoute()">Otvori rutu 10 salona</button>
+        </div>
+        <p class="muted">Za svih 217 salona nemoguće je otvoriti jednu Google rutu odjednom. Koristi pretragu po opštini/ulici i onda otvori rutu za prvih 10 rezultata.</p>
+        <input id="routeSearch" placeholder="Filtriraj rutu, npr. Zemun, Vračar, Bulevar..." oninput="renderRouteList()">
+        <div id="routeList"></div>
+      </div>
+    </section>
+
+    <section id="Saloni" class="section">
+      <div class="card">
+        <div class="between">
+          <h2>Svi saloni</h2>
+          <button class="primary adminOnly" onclick="addSalon()">Dodaj salon</button>
+        </div>
+        <div class="grid adminOnly">
+          <input id="newSalonName" placeholder="Naziv salona">
+          <input id="newSalonAddress" placeholder="Adresa">
+          <input id="newSalonCity" placeholder="Grad/opština">
+          <input id="newSalonPhone" placeholder="Telefon">
+          <input id="newSalonPib" placeholder="PIB">
+          <select id="newSalonPriority"><option>Visok</option><option>Srednji</option><option>Nizak</option></select>
+        </div>
+        <input id="allSalonSearch" placeholder="Pretraga svih salona..." oninput="renderAllSalonList()">
+        <div id="allSalonList"></div>
+      </div>
+    </section>
+
+    <section id="Poseta" class="section">
+      <div class="card">
+        <h2>Unos posete / dnevni izveštaj</h2>
+        <select id="visitSalon"></select>
+        <select id="visitResult">
+          <option>Posećen</option><option>Zainteresovan</option><option>Prodata roba</option>
+          <option>Nije zainteresovan</option><option>Nije radio</option><option>Ponovo posetiti</option>
+        </select>
+        <input id="visitProduct" placeholder="Šta je prodato">
+        <input id="visitAmount" type="number" placeholder="Promet RSD">
+        <input id="visitPib" placeholder="PIB firme ako ga nema u bazi">
+        <textarea id="visitComment" placeholder="Komentar posete, šta traži, sledeći korak..."></textarea>
+        <input id="nextVisit" type="date">
+        <button class="primary" style="width:100%" onclick="saveVisit()">Sačuvaj izveštaj</button>
+      </div>
+    </section>
+
+    <section id="Porudzbine" class="section">
+      <div class="card">
+        <h2>Porudžbina</h2>
+        <select id="orderSalon"></select>
+        <input id="orderProduct" placeholder="Proizvod">
+        <input id="orderQty" placeholder="Količina">
+        <input id="orderAmount" type="number" placeholder="Vrednost RSD">
+        <textarea id="orderComment" placeholder="Napomena"></textarea>
+        <button class="primary" style="width:100%" onclick="saveOrder()">Sačuvaj porudžbinu</button>
+      </div>
+      <div class="card"><h2>Lista porudžbina</h2><div id="ordersList"></div></div>
+    </section>
+
+    <section id="Izvestaji" class="section">
+      <div class="card">
+        <div class="between">
+          <h2>Dnevni izveštaji</h2>
+          <button class="secondary" onclick="exportReports()">Export CSV</button>
+        </div>
+        <div id="lastReports"></div>
+      </div>
+    </section>
+
+    <section id="Admin" class="section">
+      <div class="card adminOnly">
+        <h2>Admin panel</h2>
+        <p class="muted">Vlasnik može da blokira korisnika ako nije uplatio korišćenje.</p>
+        <div id="usersList"></div>
+      </div>
+      <div class="card adminOnly">
+        <h2>Dodaj korisnika</h2>
+        <div class="grid">
+          <input id="userName" placeholder="Ime">
+          <input id="userEmail" placeholder="Email">
+          <input id="userPassword" placeholder="Lozinka">
+          <select id="userRole"><option>sales</option><option>admin</option></select>
+        </div>
+        <button class="primary" onclick="addUser()">Dodaj korisnika</button>
+      </div>
+    </section>
+
+    <div class="nav">
+      <button class="active" onclick="showSection('Mapa',this)">Mapa</button>
+      <button onclick="showSection('Rute',this)">Rute</button>
+      <button onclick="showSection('Saloni',this)">Saloni</button>
+      <button onclick="showSection('Poseta',this)">Poseta</button>
+      <button onclick="showSection('Porudzbine',this)">Porudžbine</button>
+      <button onclick="showSection('Izvestaji',this)">Izveštaji</button>
+      <button class="adminOnly" onclick="showSection('Admin',this)">Admin</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const INITIAL_SALONS = [{"id": 1, "name": "Salon Avangard", "address": "Bul.Zorana Đinđića 77 lok.1-5", "city": "Beograd- NBG", "contact": "Tanja Simonović", "phone": "063-77-55-861", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 2, "name": "Estetique Prive", "address": "Admirala Geparta 17", "city": "Savski venac", "contact": "Saska Popovic", "phone": "062 855 35 22", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 3, "name": "Salon A & V", "address": "Alekse Nenadovica 36", "city": "Vracar", "contact": "Sladjana Ivanovic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 4, "name": "Salon Marko", "address": "Bezanijska 49", "city": "Zemun", "contact": "Marko Mojsic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 5, "name": "Studio SHINE S", "address": "Borcanski put", "city": "Beograd", "contact": "", "phone": "063 17 11 287", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 6, "name": "Happy People", "address": "Braće Krsmanovića", "city": "Beograd- Blizu nas", "contact": "Nikola", "phone": "062-120-44-77", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 7, "name": "Miss Friz", "address": "Braće Miladinov 6", "city": "Beograd- zvezdara", "contact": "", "phone": "065-52-56-822", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 8, "name": "Alis Hair", "address": "branicevska 7", "city": "Beograd - kod hrama", "contact": "Nina manager", "phone": "066 6666 529", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 9, "name": "Frizerski salon Dragana", "address": "bul Kralja Aleksandra 198 , ulaz iz Gajeve", "city": "Beograd - blizu nas", "contact": "", "phone": "060 714 19 13", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 10, "name": "La Marta", "address": "Bul Mihajla Pupiba 10 D lokal 44", "city": "Beograd - YUBC Centar", "contact": "Marta GOCA", "phone": "06 315 10 12", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 11, "name": "La Fee", "address": "Bul Mihajla Pupiba 10 D lokal 44", "city": "Beograd - YUBC Centar", "contact": "", "phone": "060 47 11 700", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 12, "name": "Gold Steel", "address": "Bul Mihajla Pupiba 10 D lokal 44", "city": "Beograd - YUBC Centar", "contact": "", "phone": "063 749 5886", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 13, "name": "Bucka", "address": "Bul. Kralja Aleksandra 173", "city": "Beograd- Blizu nas", "contact": "Zmaj Jovina 5 nova adresa", "phone": "063-77-57-167", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 14, "name": "Frizerski Studio Nozak", "address": "bul. Patrijarha Pavla 3", "city": "Novi Sad", "contact": "Dijana Miskovoc", "phone": "381 62 97 11 257", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 15, "name": "Hair style 011", "address": "Bul. Zorana Djindjica 71", "city": "Beograd -NBG", "contact": "Ivan", "phone": "064 2371020", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 16, "name": "Nice and easy by Bane", "address": "Bul. Zorana Djindjica 73", "city": "Beograd - NBG", "contact": "Bane", "phone": "064 3025641", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 17, "name": "Ivana Studio Nice", "address": "Bul.Zorana Đinđića 68", "city": "Beograd - NBG", "contact": "iVANA", "phone": "063-76-06-150", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 18, "name": "Kristal Beauty House", "address": "Bulevar Arsenija Carnojevica 68", "city": "Novi Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 19, "name": "Jovana Gsde je bucka bila", "address": "Bulevar Kralja Aleksandra", "city": "Beograd- Blizu nas", "contact": "Jovana", "phone": "065 304 80 64", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 20, "name": "Bolonja Plus", "address": "Bulevar kralja Aleksandra  155", "city": "Zvezdara", "contact": "Marija Besevic", "phone": "063 541 829", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 21, "name": "Studio Ana 81", "address": "Bulevar Zorana Đinđica 95", "city": "Novi Beograd", "contact": "Ana Krivokuca", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 22, "name": "Coka", "address": "Cara Nikolaja II 45", "city": "Beograd - Vracar", "contact": "", "phone": "065 606 64 96", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 23, "name": "Beauty Lounge", "address": "Cara Nikolaja II 77", "city": "Beograd- Vracar", "contact": "Biljana", "phone": "064-251-49-34", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 24, "name": "Aria", "address": "Dalmatinska 23", "city": "Beograd - centar kod botanicke", "contact": "Marija", "phone": "069 173 97 31", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 25, "name": "Milena Divac", "address": "Danicareva 1", "city": "Vracar", "contact": "Milena Divac", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 26, "name": "Studio lepote Sofija", "address": "Deli Radivoja 15", "city": "Beograd- Vozdovac", "contact": "", "phone": "061 28 339 39", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 27, "name": "Frizerski salon Sova", "address": "Dimitrija Tucovica", "city": "Beograd - blizu nas", "contact": "", "phone": "064 57 60 790", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 28, "name": "NDL", "address": "Djakovacka 6", "city": "Beograd - pored nas", "contact": "Gordana Ruzicic", "phone": "065 95 633 72", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 29, "name": "Head Studio DD", "address": "djordja rajkovica 17", "city": "Novi Sad", "contact": "Duska", "phone": "069-40-70-700", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 30, "name": "Salon Danijela", "address": "Dr Ivana Ribara 115 b , Zanatski centar", "city": "Brograd -NBG", "contact": "Gordana Domazec", "phone": "062 32 44 77", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 31, "name": "Frizerski salon Hair", "address": "dr. Mladena Stojanovica 15 a", "city": "Zrenjanin - Elemir", "contact": "Zorica Curic", "phone": "063 702 49 06", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 32, "name": "Vesna", "address": "Dragoslava Jovanovica 13 interfon milovanovic", "city": "Beograd - Skupstina", "contact": "Vesna", "phone": "063 228311", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 33, "name": "Beauty Mary", "address": "Dubljanska 22 - Ivana  -- nije više u ovom salonu", "city": "Beograd- Vracar", "contact": "Marija gazdarica 0641606410", "phone": "064-16-34-236", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 34, "name": "Prointer sistem", "address": "Dunavska bb", "city": "Dorcol", "contact": "Salon u sklopu firme", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 35, "name": "Mancic Sanja , MS Studio", "address": "Dusana Vlajica 15", "city": "Beograd - zarkovo", "contact": "", "phone": "060 3716 988", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 36, "name": "Salon Kika", "address": "Dvadeset drugog oktobra 6", "city": "Zemun", "contact": "Svetlana Nikolic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 37, "name": "Salon Fidi", "address": "Đakovačka 21", "city": "Beograd- preko puta nas", "contact": "", "phone": "063-26-25-75", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 38, "name": "Anja Nikolic", "address": "Đure Daničića 5", "city": "Beograd - stari grad", "contact": "Anja Nikolić", "phone": "060-13-09-247", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 39, "name": "Pro And Cuk", "address": "excluziv ima 7 salona", "city": "Beograd", "contact": "", "phone": "060 30 33 221", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 40, "name": "Di Art", "address": "Golubacka 6", "city": "Beograd - Vracar", "contact": "Maja", "phone": "065 65 99 712", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 41, "name": "Cut and Go 21", "address": "Gunduliceva 15", "city": "Novi Sad", "contact": "Aleksandra Aleksic", "phone": "066 800 81 92", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 42, "name": "Studio A I M", "address": "Gvoydiceva 2", "city": "Zvezdara", "contact": "Rada Popadic", "phone": "069 1781 115", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 43, "name": "Bellora", "address": "Ilije Birčanina 29,", "city": "Novi Sad", "contact": "", "phone": "066-50-45-975", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 44, "name": "Nada I Maja", "address": "Ilije Ognjanovica 8", "city": "Novi Sad", "contact": "nada", "phone": "060 37 64 597", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 45, "name": "Milka salon 021", "address": "Jastrebacka 49", "city": "Novi Sad", "contact": "Milka", "phone": "060 641 30 28", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 46, "name": "Madmazel", "address": "Jedrenska 8", "city": "Beograd- Blizu nas", "contact": "blizu kristine", "phone": "064-27-06-683", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 47, "name": "Jovana Dojcinovic", "address": "Jedrenska 8", "city": "Beograd- Blizu nas", "contact": "Jovana", "phone": "064 98 43 898", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 48, "name": "G line", "address": "jezero bb", "city": "Zlatibor", "contact": "Dragana Kaljevic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 49, "name": "Lulu", "address": "Jurija Gagarina 14 e", "city": "Beograd - NBG belvil", "contact": "", "phone": "060 444 97 66", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 50, "name": "Vortex Beauty Hair", "address": "Jurija Gagarina 14 L lok 6", "city": "Beograd - NBG belvil", "contact": "", "phone": "060 086 32 56", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 51, "name": "Hair & Makeup TEAM", "address": "Jurija Gagarina 14e", "city": "Beograd- NBG- Belvil", "contact": "Dragana", "phone": "065 500 63 36", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 52, "name": "Salon Cec", "address": "Jurija Gagarina 14l", "city": "Novi Beograd", "contact": "Svetlana Bogicevic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 53, "name": "Cut and Talk", "address": "Jurija Gagarina 14ž", "city": "Beograd- NBG - belvil", "contact": "", "phone": "060-67-81-901", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 54, "name": "Danijela Šiz za najbolji friz", "address": "Jurija gagarina 155 b ,Piramida,prekoputa meka", "city": "Beograd - NBG", "contact": "Danijela", "phone": "062-22-80-28", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 55, "name": "Frizerski salon Masa", "address": "Jurija Gagarina 155 b/1", "city": "Beograd - NBG", "contact": "", "phone": "064 14 91 943", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 56, "name": "Jazzy Style", "address": "Jurija Gagarina 229 , TC Enjub lokal 103", "city": "Beograd - NBG Enjub", "contact": "", "phone": "062 14 98 913", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 57, "name": "VS Studio", "address": "Jurija Gagarina 231 lok 139", "city": "Beograd - NBG", "contact": "Vesna Savic", "phone": "060 5555 181", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 58, "name": "Seka 114", "address": "Juzni Bulevar 114", "city": "Beograd", "contact": "Seka I Sneza", "phone": "061 612 82 74", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 59, "name": "Nadaly", "address": "Kajmakcalanska 4", "city": "Beograd- Blizu nas", "contact": "Katarina -radnica", "phone": "062 120 90 13", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 60, "name": "Salon Ram", "address": "Kajmakčalanska 8/1", "city": "Beograd - blizu nas", "contact": "Filip", "phone": "062-58-57-05", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 61, "name": "Mina Revlon Redken", "address": "Kajmakčalanska 9", "city": "Beograd - blizu nas", "contact": "", "phone": "064-02-94-017", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 62, "name": "Trend", "address": "Karadjordjeva 120", "city": "Valjevo", "contact": "Trajko Krstic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 63, "name": "Pink 3", "address": "Karađorđeva 20", "city": "Smederevo", "contact": "Dragana Milovanovic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 64, "name": "Studio Perfekt", "address": "Karađorđeva 27", "city": "Sabac", "contact": "Ljiljana Radovic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 65, "name": "Ivana", "address": "Kneginje Ljubice 32", "city": "Beograd- dorcol", "contact": "Ivana", "phone": "063-81-13-942", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 66, "name": "Bed Head", "address": "Kornelija Stankovica 29", "city": "Novi Sad", "contact": "Verica", "phone": "063-83-11-737", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 67, "name": "Elies Beauty", "address": "Kosovska 24", "city": "Novi Sad", "contact": "Elie Hakim", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 68, "name": "Mystic", "address": "Kralja Aleksandra 33", "city": "Sabac", "contact": "Marija Zikic", "phone": "063 7484 811", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 69, "name": "Tres Amigas", "address": "Krunska 81", "city": "Beograd- Vracar", "contact": "Irena,", "phone": "064-111-99-02", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 70, "name": "Kardashian beauty", "address": "Laze Kostica 8", "city": "Novi Sad", "contact": "", "phone": "061 649 43 72", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 71, "name": "Zenski Kutak Beti i NALE", "address": "Luneta Milanovića 3", "city": "Beograd - konjarnik", "contact": "Beti", "phone": "064-38-88-983", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 72, "name": "Eleonora", "address": "Majke Jevrosime 35", "city": "Beograd", "contact": "Eleonora", "phone": "064 1378435", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 73, "name": "Beaity Centar", "address": "Majke Jevrosime 35", "city": "Beograd", "contact": "", "phone": "064 363 55 85", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 74, "name": "Gospodjica Salon", "address": "Majke Jevrosime 40", "city": "Beograd", "contact": "Dragana", "phone": "061 155 99 95", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 75, "name": "Bomaz by Maja", "address": "Makenzijeva 35", "city": "Vracar", "contact": "Maja Mirkovic", "phone": "063 541 729", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 76, "name": "Salon lepote Moment", "address": "Maksima Gorkog 57", "city": "Beograd - Vracar", "contact": "", "phone": "063 830 82 77", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 77, "name": "Krkelic", "address": "Marka Oreskovica 6", "city": "Beograd - blizu nas", "contact": "", "phone": "061 148 09 07", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 78, "name": "Frajla", "address": "Marsala Birjuzova 53", "city": "Beograd- obilicev venac", "contact": "Danijela", "phone": "064 1710908", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 79, "name": "Salon SD", "address": "Masarikova 26", "city": "Sabac", "contact": "Sofija Bratic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 80, "name": "Ko te Sisa", "address": "Masarikova 8", "city": "Arilje", "contact": "Maja Savovic", "phone": "060 555 13 52", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 81, "name": "salon n5", "address": "Mice Popovica 5", "city": "Dorcol", "contact": "Nina Zijadic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 82, "name": "Kosmopolitan Užice", "address": "Milana Rakića 10", "city": "Užice", "contact": "", "phone": "069-33-59-050", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 83, "name": "Studio Solo per te", "address": "Milesevska 38", "city": "Beograd - Vracar", "contact": "Ivana", "phone": "011 24 55 634", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 84, "name": "Chic and Shine", "address": "Milesevska 67, lokal br. 7 ; ulaz iz Vojvode Petka", "city": "Beograd- Blizu nas", "contact": "", "phone": "063-23-85-72", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 85, "name": "Beauty Hub", "address": "Milinka Kusica 7", "city": "Ivanjica", "contact": "Dragana Zlatic", "phone": "069 20 250 89", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 86, "name": "Magnificent", "address": "Milutina Milankovica 7B", "city": "Novi Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 87, "name": "Terapy Hair", "address": "Mirijevski Bulevar 18b", "city": "Beograd - Mirjevo", "contact": "Natasa Skaljac", "phone": "060 35 35 349", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 88, "name": "Dejan Velicki", "address": "Mise Dimitrijevica 16", "city": "Novi Sad", "contact": "Dejan", "phone": "063 39 00 46", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 89, "name": "Milan Sarić", "address": "Mišarska 4a", "city": "Beograd - stari grad", "contact": "Milan Sarić", "phone": "064-44-17-758", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 90, "name": "Srđan", "address": "Mutapova 26", "city": "Beograd - Vracar", "contact": "Srđan", "phone": "065-60-00-615", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 91, "name": "Salon Luna", "address": "Nedeljka Gvozdenovića 14", "city": "Beograd- Bezanija", "contact": "Jelica i Slavijana", "phone": "064-61-30-183", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 92, "name": "Fancy studio Twins- Vesna Tomic", "address": "Nikole Cupica 4", "city": "Sabac", "contact": "Vesna", "phone": "061 680 17 79", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 93, "name": "Hair studio P&K", "address": "Novopazarska 40", "city": "Beograd-vracar", "contact": "Pavle", "phone": "061 248 53 43", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 94, "name": "Lady Beauty", "address": "Omladinskih brigada 86z", "city": "Novi Beograd", "contact": "Dragana Bekvalac", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 95, "name": "Hair studio Maksic", "address": "Partizanska 32", "city": "Backi Jarak", "contact": "Tatjana I Jelena Maksic", "phone": "069 404 77 79 Tatjana", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 96, "name": "Nefertiti", "address": "Patrijarha Gavrila 14", "city": "Vracar", "contact": "Jelena Cvetkovic", "phone": "062660 001", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 97, "name": "Ivan", "address": "Pavla Orlovica 4", "city": "Beograd - Vracar", "contact": "", "phone": "069 41 25 512", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 98, "name": "Studio Djorem", "address": "Pavla Vuisica 53", "city": "Altina", "contact": "Jovana Novakovic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 99, "name": "Xwrio", "address": "Petlovo brdo , kod vertiga", "city": "Beograd - Petlovo Brdo", "contact": "Zorica", "phone": "063-80-18-353", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 100, "name": "Salon Salvadore", "address": "Petra Drapšina 36", "city": "Novi Sad", "contact": "Milena", "phone": "063-729-21-67", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 101, "name": "Nadja Simic", "address": "Petrogradska 13", "city": "Beograd- Vracar", "contact": "Nada Simic", "phone": "066 083 492", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 102, "name": "Mira Salon ?", "address": "Pjera Krizanica 1 ulaz iz kusinih rudara", "city": "Beograd- mirjevo", "contact": "Mira", "phone": "064-12 99 099", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 103, "name": "Zmajoni", "address": "Pop Stojanova 17", "city": "Beograd - blizu nas", "contact": "Maja stefanovic", "phone": "069 2018416", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 104, "name": "Fen I Cetka", "address": "Pop Stojanova 3", "city": "Vracar", "contact": "Miodrag Mirjacic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 105, "name": "Nenad Mudrinic", "address": "Pozarevacka 29", "city": "Beograd - Vracar", "contact": "Nenad", "phone": "069 156 77 77", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 106, "name": "Premijer Saloni", "address": "Premijer GOLD", "city": "Beograd - blizu nas", "contact": "", "phone": "011  244 08 71", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 107, "name": "Chic & Mistique", "address": "Prote Mateje 56", "city": "Beograd - Vracar", "contact": "Nevena", "phone": "064 286 1551", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 108, "name": "Desire", "address": "Prote Mateje 60", "city": "Beograd - Vracar", "contact": "", "phone": "069-79-15-20", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 109, "name": "Holidey", "address": "Prote Smiljanica 51", "city": "Sabac", "contact": "Dragana Jovanovic", "phone": "066 87 608 76", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 110, "name": "Lela Style", "address": "Puskinova", "city": "Novi Sad", "contact": "Lela", "phone": "069 506 55 62", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 111, "name": "M2 frizerski salon", "address": "Puskinova 22", "city": "Novi Sad", "contact": "Miroslava", "phone": "063 823 24 67", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 112, "name": "TiM frizerdski salon", "address": "Ruzveltova 1", "city": "Beograd", "contact": "", "phone": "063 7018 757", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 113, "name": "Salon Karaburma", "address": "Salvadora Aljendea 14", "city": "Beograd - Karaburma", "contact": "", "phone": "064-95-59-782", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 114, "name": "Salon Slavica", "address": "Slobodana Glumca 11 B", "city": "Beograd - Zemun -Altina", "contact": "", "phone": "064 07 14 185", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 115, "name": "Hair & Beauty", "address": "Sokolska 15/2", "city": "Beograd - vracar", "contact": "Damir Stanojevic", "phone": "065 22 99 220", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 116, "name": "Manjana", "address": "Solunska 18", "city": "Beograd - dorcol", "contact": "", "phone": "069-21-82-937", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 117, "name": "Avangard", "address": "Stane Milanovic 9a", "city": "Šabac", "contact": "Ana Vladušić", "phone": "060-72-81-984", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 118, "name": "Color and CUT Maja", "address": "Starca Vujadina 8", "city": "Beograd -blizu nikole heppy", "contact": "Maja", "phone": "065 94 94 919", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 119, "name": "Frizerski Atelje Dragan", "address": "Sterijino Sokace bb Centar", "city": "Vrsac", "contact": "", "phone": "063 80 11 289", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 120, "name": "Salon Lola", "address": "Stevana Dukića 49", "city": "Beograd- Karaburma", "contact": "", "phone": "069-26-24-284", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 121, "name": "Studio Shine", "address": "Strahinjića Bana 22", "city": "Beograd- dorcol", "contact": "", "phone": "064-26-37-583", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 122, "name": "Angels frizerski salon", "address": "Strumicka 49", "city": "Beograd", "contact": "Marijana", "phone": "061 1466634", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 123, "name": "Studio Kalax", "address": "Sumadijska 23", "city": "Zemun", "contact": "Marija Cica", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 124, "name": "Sanja Mary Lp", "address": "Svetozara Markovića 48", "city": "Beograd- Slavija Vracar", "contact": "", "phone": "064-42-82-296", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 125, "name": "Milan Ančević", "address": "Takovska 13", "city": "Beograd Stari gard", "contact": "Milan Ančević", "phone": "064-25-47-271", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 126, "name": "Studio Prostor", "address": "Terazije 5", "city": "Stari grad", "contact": "Jelena Jovanovic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 127, "name": "Markos", "address": "Tirsov venac 35/1", "city": "Šabac", "contact": "Milijana Gogić - Marko glavni", "phone": "064-22-90-398", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 128, "name": "Son Trade DOO", "address": "Tosin bunar 30", "city": "Zemun", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 129, "name": "Beauty Studio Mary", "address": "Trg Majke Jevrosime 19", "city": "Novi Sad", "contact": "Marina", "phone": "063 85 85 803", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 130, "name": "Ceca Enjub", "address": "Tržni centar Enjub-1.sprat", "city": "Beograd- NBG", "contact": "Ceca", "phone": "064-19-00-713", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 131, "name": "R&b", "address": "Ugrinovacka 60", "city": "Zemun", "contact": "Biljana i Radmila", "phone": "060 306 30 07", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 132, "name": "Salon Ubavica", "address": "ugrinovacki put 16 n", "city": "Beograd -Altina NBG zemun", "contact": "Ankica Nuredinovski", "phone": "064-35-74-888", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 133, "name": "ICON", "address": "Urosa Martinovica 16", "city": "Beograd - NBG belvil", "contact": "Milena Jovanovic", "phone": "069 45 25 696", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 134, "name": "Boban Ciric", "address": "Urosa Martinovica 9", "city": "Beograd - A blok NBG", "contact": "Boban Ciric", "phone": "063 85 33 113", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 135, "name": "Šta reći", "address": "Ustanička 204a", "city": "Beograd- konjarnik", "contact": "Mira", "phone": "064-24-10-236", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 136, "name": "Salon Golden Hair", "address": "Ustanička bb", "city": "Užice", "contact": "Snežana Kostić", "phone": "060-552-66-81", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 137, "name": "Lazar Matic", "address": "Vase Pelagica 1", "city": "Novi Sad", "contact": "Lazar", "phone": "063 80 25 258", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 138, "name": "Studio S", "address": "Vatroslava Jagica 8", "city": "Beograd - blizu nas", "contact": "", "phone": "069  48 23 077", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 139, "name": "Gaga", "address": "Velizara Kosanovića 68", "city": "Beograd- konjarnik", "contact": "", "phone": "064-22-35-525", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 140, "name": "Stash beauty", "address": "Vladimira Karica 7", "city": "Beograd -blizu juznog bul", "contact": "Andjela menadzerka Nikola frizer", "phone": "063 316 100", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 141, "name": "Branka", "address": "Vodovodska 66", "city": "Beograd - zarkovo", "contact": "Branka", "phone": "060 070 39 78", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 142, "name": "Salon 21", "address": "Vojislava Ilica 21", "city": "Vracar", "contact": "Matija Jokovic", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 143, "name": "Salon 21", "address": "Vojislava Ilića 21", "city": "Beograd Crveni krst", "contact": "", "phone": "060-43-16-363", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 144, "name": "MSD", "address": "Vojvode Dragomira 6", "city": "Beograd- Vracar", "contact": "Suzana Isailovic", "phone": "064-47-25-566", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 145, "name": "Astoria", "address": "Vojvode Petka 6 lokal 1", "city": "Beograd - blizu nas", "contact": "Sladjana Maksic", "phone": "064 165 32 12", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 146, "name": "Elite", "address": "Vojvode putnika 38", "city": "Nova Pazova", "contact": "Radenković Snežana", "phone": "064-24-77-143", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 147, "name": "Ljubica", "address": "Vojvode Stepe 168 -", "city": "Beograd - Vozdovac", "contact": "Ljubica", "phone": "069-249-61-41", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 148, "name": "Frizer I Barber  CROWN88", "address": "Vojvode stepe 174", "city": "Beograd - Vozdovac", "contact": "Andreja I Ivan Kocic", "phone": "060 599 400  / 066 221 984", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 149, "name": "Olivera Zagorac", "address": "Vojvode Šupljikca 22", "city": "Novi Sad", "contact": "Olivera Zagorac", "phone": "063-721-98-24", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 150, "name": "Toti", "address": "Vojvodjanska 414, kod skretanja", "city": "Beograd- Surcin", "contact": "", "phone": "065-22-61-001", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 151, "name": "Green Style", "address": "Vranjska 20", "city": "Beograd- Blizu nas", "contact": "Sanja", "phone": "063-31-43-56", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 152, "name": "Salon Marijana", "address": "Zemunska 11", "city": "Beograd - Dobanovci", "contact": "Marijana Topolski", "phone": "062 51 06 19", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 153, "name": "Kruz", "address": "Zicka 25", "city": "Beograd -Crveni krst", "contact": "Slavica gazdarica", "phone": "064 34 22 677", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 154, "name": "Ana Studio", "address": "Zorana Djindjica 95", "city": "Beograd-NBG", "contact": "Ana", "phone": "060 555 27 34", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 155, "name": "Dragana B", "address": "Zorana Radmilovica 1 , prvi lokal sa leve strane preko puta Meridijana kladionice", "city": "Beograd - Mirjevo", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 156, "name": "Nevena", "address": "Žarkovo - Zdravka Jovanovica 31", "city": "Beograd Zarkovo", "contact": "Slavica gazdarica", "phone": "060-72-10-804", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 157, "name": "Marina-Frizerski salon Mask", "address": "Žarkovo-Tržni centar Mondo", "city": "Beograd- zarkovo", "contact": "Marina", "phone": "060-35-14-229", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 158, "name": "Salon Noa", "address": "", "city": "Beograd", "contact": "", "phone": "063-38-60-70", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 159, "name": "Astrum", "address": "", "city": "Šabac", "contact": "", "phone": "064-51-50-010", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 160, "name": "Ceca", "address": "", "city": "Užice", "contact": "", "phone": "064-19-00-713", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 161, "name": "Head Office", "address": "", "city": "Vršac", "contact": "Biljana", "phone": "063-305-645", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 162, "name": "Salon Ruža", "address": "", "city": "Užice", "contact": "", "phone": "064-171-88-10", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 163, "name": "Hair & Makeup", "address": "", "city": "Nis", "contact": "Vesna", "phone": "064 898 22 60", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 164, "name": "Salon Beauty Studio Majestic", "address": "", "city": "Uzice", "contact": "Draskovic Ksenija", "phone": "060 51 74 800", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 165, "name": "Alfaparf Studio", "address": "Višnjička 84, TC Big Fashion, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 166, "name": "ANĐELA GMG", "address": "Savska 33, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 167, "name": "AURORA FRIZERSKI SALON", "address": "Bulevar doktora Zorana Đinđića 105, lokal 23, Novi Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 168, "name": "BE CUTE BY SNEŽANA", "address": "Mite Ružića 9, Zvezdara, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 169, "name": "BE YOU 011", "address": "Zaplanjska 84g, Voždovac, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 170, "name": "Beauty World", "address": "Gospodar Jovanova 50, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 171, "name": "BG PROFY", "address": "Cara Nikolaja II 70, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 172, "name": "S-LADY", "address": "Visokog Stevana 12, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 173, "name": "CAPELLI", "address": "Mike Alasa 24, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 174, "name": "COCO", "address": "Baba Višnjina 37, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 175, "name": "COSMETICS ROOM", "address": "Gospodar Jovanova 69, Dorćol, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 176, "name": "Cut & Talk", "address": "Jurija Gagarina 142, lokal 9, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 177, "name": "Cvrle Frizerski Salon – Centar", "address": "Nušićeva 7, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 178, "name": "Cvrle Frizerski Salon – Slavija", "address": "Beogradska 10, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 179, "name": "Cvrle Frizerski Salon – Slavija 2", "address": "Beogradska 6, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 180, "name": "Cvrle Frizerski Salon – Voždovac", "address": "Jove Ilića 197, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 181, "name": "DANA FRIZERSKI SALON", "address": "Luja Adamiča 26g, Novi Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 182, "name": "ENCANTO", "address": "Ratka Mitrovića 130, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 183, "name": "EUROSTYLE 2024 DOO", "address": "Nikole Dobrovića 25, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 184, "name": "FRIZER ZA ŽENE JASNA", "address": "Bulevar kralja Aleksandra 532b, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 185, "name": "FRIZERSKI SALON BAJKA", "address": "Zrenjaninski put 19a, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 186, "name": "Frizerski salon Bata", "address": "Južni bulevar 36, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 187, "name": "FRIZERSKI SALON KARITA", "address": "Bulevar Zorana Đinđića 123V, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 188, "name": "FRIZERSKI SALON MAŠA", "address": "Kirovljeva 17, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 189, "name": "FRIZERSKI SALON TI-SO", "address": "Bulevar Zorana Đinđića 199, Novi Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 190, "name": "GIOVANNI RI", "address": "Mite Ružića 20, Zvezdara, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 191, "name": "Grey 2", "address": "Knez Mihajlova 19, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 192, "name": "Hair by Danijela", "address": "Braće Miladinov 6, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 193, "name": "HAIR LAB", "address": "Jurija Gagarina 14 lj, lokal 12, Novi Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 194, "name": "Hair Studio Marina", "address": "Stojana Protića 27, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 195, "name": "HAPPY TEAM", "address": "Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 196, "name": "Jelena Janković", "address": "Doktora Dragoslava Popovića 16, lokal 7, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 197, "name": "JELENA MARINKOVIĆ", "address": "Gornjogradska 11, lokal 9, Zemun", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 198, "name": "JOVICA HAIR STYLE", "address": "Dragoslava Jovanovića 11, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 199, "name": "KOZMETIČKI SALON IVA", "address": "Šumatovačka 116, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 200, "name": "M2 HAIRSTYLING", "address": "Čubrina 1, Stari grad, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 201, "name": "Milana Hair Style", "address": "Bulevar Arsenija Čarnojevića 68/4, Novi Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 202, "name": "MINA - SLAVIJA", "address": "Svetozara Markovića 68, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 203, "name": "MN Beauty studio", "address": "Luke Ćelovića Trebinjca 50, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 204, "name": "MUŠKO-ŽENSKI FRIZER LUKA+", "address": "Marijane Gregoran 75, Karaburma, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 205, "name": "Novelle", "address": "Ljubička 16, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 206, "name": "Perfect Hair", "address": "Kosovska 5, Zemun, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 207, "name": "PICIKATO PARRUCCHIERE", "address": "Makedonska 2a, Zemun, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 208, "name": "PINK STARSS", "address": "Krajiška 59d, Zemun, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 209, "name": "PLAVUŠA", "address": "Oblakovska 28, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 210, "name": "SALON RUŽICA", "address": "Vojina Đurašinovića 1, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 211, "name": "SALON XXL", "address": "Bulevar Arsenija Čarnojevića 95, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 212, "name": "Sip&Style", "address": "Makedonska 17, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 213, "name": "Šizz Frizz", "address": "Dečanska 19, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 214, "name": "Studio OM", "address": "Petrarkina 12, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 215, "name": "STUDIO VISAGE", "address": "Molerova 25, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 216, "name": "URBAN BEAUTY", "address": "Mirijevski bulevar 18b, TC Karaburma, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}, {"id": 217, "name": "Velaris", "address": "Trgovačka 7, lokal 5, Beograd", "city": "Beograd", "contact": "", "phone": "", "pib": "", "priority": "Srednji", "status": "Planiran"}];
+
+const LS = {
+  users: "sr_users_v2",
+  salons: "sr_salons_v2",
+  visits: "sr_visits_v2",
+  orders: "sr_orders_v2",
+  current: "sr_current_v2"
+};
+
+function seed(){
+  if(!localStorage.getItem(LS.users)){
+    localStorage.setItem(LS.users, JSON.stringify([
+      {id:1,name:"Vlasnik",email:"admin@firma.rs",password:"admin123",role:"admin",blocked:false,paid:true},
+      {id:2,name:"Pera Komercijalista",email:"pera@firma.rs",password:"123456",role:"sales",blocked:false,paid:true}
+    ]));
+  }
+  if(!localStorage.getItem(LS.salons)) localStorage.setItem(LS.salons, JSON.stringify(INITIAL_SALONS));
+  if(!localStorage.getItem(LS.visits)) localStorage.setItem(LS.visits, "[]");
+  if(!localStorage.getItem(LS.orders)) localStorage.setItem(LS.orders, "[]");
+}
+seed();
+
+let currentUser = JSON.parse(localStorage.getItem(LS.current) || "null");
+let selectedSalonId = getSalons()[0]?.id || 1;
+
+function getUsers(){return JSON.parse(localStorage.getItem(LS.users)||"[]")}
+function setUsers(v){localStorage.setItem(LS.users,JSON.stringify(v))}
+function getSalons(){return JSON.parse(localStorage.getItem(LS.salons)||"[]")}
+function setSalons(v){localStorage.setItem(LS.salons,JSON.stringify(v))}
+function getVisits(){return JSON.parse(localStorage.getItem(LS.visits)||"[]")}
+function setVisits(v){localStorage.setItem(LS.visits,JSON.stringify(v))}
+function getOrders(){return JSON.parse(localStorage.getItem(LS.orders)||"[]")}
+function setOrders(v){localStorage.setItem(LS.orders,JSON.stringify(v))}
+
+function login(){
+  const email=document.getElementById("loginEmail").value.trim().toLowerCase();
+  const pass=document.getElementById("loginPassword").value;
+  const user=getUsers().find(u=>u.email.toLowerCase()===email && u.password===pass);
+  if(!user){alert("Pogrešan email ili lozinka");return}
+  if(user.blocked){alert("Nalog je blokiran. Kontaktiraj vlasnika.");return}
+  currentUser=user;
+  localStorage.setItem(LS.current,JSON.stringify(user));
+  renderApp();
+}
+function logout(){localStorage.removeItem(LS.current);location.reload()}
+
+function renderApp(){
+  if(!currentUser)return;
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("mainApp").classList.remove("hidden");
+  document.getElementById("loggedUser").innerText=currentUser.name+" / "+currentUser.role;
+  document.querySelectorAll(".adminOnly").forEach(el=>{ el.style.display=currentUser.role==="admin"?"":"none"; });
+  renderAll();
+}
+
+function requireActive(){
+  const fresh=getUsers().find(u=>u.id===currentUser.id);
+  if(fresh && fresh.blocked){ document.getElementById("blockedBox").classList.remove("hidden"); return false; }
+  return true;
+}
+
+function showSection(id,btn){
+  if(!requireActive())return;
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  if(id==="Mapa") updateMap();
+}
+
+function selectedSalon(){
+  return getSalons().find(s=>s.id===selectedSalonId) || getSalons()[0];
+}
+
+function queryOf(s){ return [s.address, s.city].filter(Boolean).join(", "); }
+
+function updateMap(){
+  const s = selectedSalon();
+  if(!s)return;
+  document.getElementById("mapSalonName").innerText = s.name;
+  document.getElementById("mapSalonAddress").innerText = queryOf(s);
+  document.getElementById("mapFrame").src = "https://www.google.com/maps?q=" + encodeURIComponent(queryOf(s)) + "&output=embed";
+}
+
+function openSelectedMap(){
+  const s=selectedSalon();
+  window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(queryOf(s)),"_blank");
+}
+
+function renderAll(){
+  renderStats(); renderSalons(); renderAllSalonList(); renderRouteList(); renderSelects(); renderVisits(); renderOrders(); renderUsers(); updateMap();
+}
+
+function renderStats(){
+  const salons=getSalons(), visits=getVisits(), orders=getOrders();
+  const revenue=visits.reduce((s,v)=>s+Number(v.amount||0),0)+orders.reduce((s,o)=>s+Number(o.amount||0),0);
+  document.getElementById("statSalons").innerText=salons.length;
+  document.getElementById("statVisits").innerText=visits.length;
+  document.getElementById("statOrders").innerText=orders.length;
+  document.getElementById("statRevenue").innerText=revenue.toLocaleString("sr-RS");
+}
+
+function salonCard(s,i,compact=false){
+  return `<div class="salon ${s.id===selectedSalonId?'active':''}">
+    <div class="between">
+      <div>
+        <h3>${i+1}. ${escapeHtml(s.name)}</h3>
+        <div class="muted">${escapeHtml(queryOf(s))}</div>
+        <div class="tiny">Tel: ${escapeHtml(s.phone||"—")} | PIB: ${escapeHtml(s.pib||"—")} | Prioritet: ${escapeHtml(s.priority||"Srednji")}</div>
+      </div>
+      <span class="status blue">${escapeHtml(s.status||"Planiran")}</span>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="secondary" onclick="selectSalon(${s.id})">Učitaj mapu</button>
+      <button class="secondary" onclick="callSalon('${escapeAttr(s.phone||"")}')">Pozovi</button>
+      <button class="secondary" onclick="openMap(${s.id})">Google Maps</button>
+      <button class="primary" onclick="quickVisit(${s.id})">Unos posete</button>
+      ${currentUser && currentUser.role==="admin"?`<button class="danger" onclick="deleteSalon(${s.id})">Obriši</button>`:""}
+    </div>
+  </div>`;
+}
+
+function filteredSalons(inputId){
+  const q=(document.getElementById(inputId)?.value||"").toLowerCase().trim();
+  return getSalons().filter(s => !q || (s.name+" "+s.address+" "+s.city+" "+s.phone).toLowerCase().includes(q));
+}
+
+function renderSalons(){
+  const list=filteredSalons("searchSalon");
+  document.getElementById("mapSalonList").innerHTML=list.slice(0,80).map(salonCard).join("") || "<p class='muted'>Nema rezultata.</p>";
+}
+
+function renderAllSalonList(){
+  const list=filteredSalons("allSalonSearch");
+  document.getElementById("allSalonList").innerHTML=list.map(salonCard).join("") || "<p class='muted'>Nema rezultata.</p>";
+}
+
+function renderRouteList(){
+  const list=filteredSalons("routeSearch");
+  document.getElementById("routeList").innerHTML=list.slice(0,30).map(salonCard).join("") || "<p class='muted'>Nema rezultata.</p>";
+}
+
+function selectSalon(id){
+  selectedSalonId=id;
+  renderSalons(); renderAllSalonList(); renderRouteList(); updateMap();
+}
+
+function renderSelects(){
+  const salons=getSalons();
+  const options=salons.map(s=>`<option value="${s.id}">${escapeHtml(s.name)} - ${escapeHtml(s.address)}</option>`).join("");
+  document.getElementById("visitSalon").innerHTML=options;
+  document.getElementById("orderSalon").innerHTML=options;
+}
+
+function addSalon(){
+  const salons=getSalons();
+  const s={ id:Date.now(), name:val("newSalonName"), address:val("newSalonAddress"), city:val("newSalonCity")||"Beograd", phone:val("newSalonPhone"), pib:val("newSalonPib"), priority:document.getElementById("newSalonPriority").value, status:"Planiran" };
+  if(!s.name||!s.address){alert("Unesi naziv i adresu salona");return}
+  salons.push(s); setSalons(salons);
+  ["newSalonName","newSalonAddress","newSalonCity","newSalonPhone","newSalonPib"].forEach(id=>document.getElementById(id).value="");
+  renderAll();
+}
+function deleteSalon(id){ if(!confirm("Obrisati salon?"))return; setSalons(getSalons().filter(s=>s.id!==id)); renderAll(); }
+
+function callSalon(phone){ if(!phone){alert("Nema telefona");return} location.href="tel:"+phone; }
+function openMap(id){ const s=getSalons().find(x=>x.id===id); window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(queryOf(s)),"_blank"); }
+
+function openDailyRoute(){
+  const source = document.getElementById("routeSearch")?.value ? filteredSalons("routeSearch") : filteredSalons("searchSalon");
+  const list = source.slice(0,10);
+  if(!list.length){alert("Nema salona za rutu.");return}
+  const route=list.map(s=>encodeURIComponent(queryOf(s))).join("/");
+  window.open("https://www.google.com/maps/dir/"+route,"_blank");
+}
+
+function quickVisit(id){
+  selectedSalonId=id; document.getElementById("visitSalon").value=id;
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById("Poseta").classList.add("active");
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+}
+
+function saveVisit(){
+  if(!requireActive())return;
+  const salonId=Number(document.getElementById("visitSalon").value);
+  const salon=getSalons().find(s=>s.id===salonId);
+  const v={ id:Date.now(), userId:currentUser.id, userName:currentUser.name, salonId, salonName:salon.name, date:new Date().toLocaleDateString("sr-RS"), time:new Date().toLocaleTimeString("sr-RS",{hour:"2-digit",minute:"2-digit"}), result:document.getElementById("visitResult").value, product:val("visitProduct"), amount:val("visitAmount"), pib:val("visitPib"), comment:val("visitComment"), nextVisit:val("nextVisit") };
+  const visits=getVisits(); visits.unshift(v); setVisits(visits);
+  ["visitProduct","visitAmount","visitPib","visitComment","nextVisit"].forEach(id=>document.getElementById(id).value="");
+  renderAll(); alert("Izveštaj je sačuvan");
+}
+
+function renderVisits(){
+  const visits=getVisits();
+  document.getElementById("lastReports").innerHTML = visits.length ? `<table><thead><tr><th>Datum</th><th>Komercijalista</th><th>Salon</th><th>Rezultat</th><th>Promet</th><th>Komentar</th></tr></thead><tbody>${visits.slice(0,50).map(v=>`<tr><td>${v.date} ${v.time}</td><td>${escapeHtml(v.userName)}</td><td>${escapeHtml(v.salonName)}</td><td>${escapeHtml(v.result)}</td><td>${Number(v.amount||0).toLocaleString("sr-RS")}</td><td>${escapeHtml(v.comment||"")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">Još nema dnevnih izveštaja.</p>`;
+}
+
+function saveOrder(){
+  if(!requireActive())return;
+  const salonId=Number(document.getElementById("orderSalon").value);
+  const salon=getSalons().find(s=>s.id===salonId);
+  const product=val("orderProduct");
+  if(!product){alert("Unesi proizvod");return}
+  const o={ id:Date.now(), userId:currentUser.id, userName:currentUser.name, salonId, salonName:salon.name, product, qty:val("orderQty"), amount:val("orderAmount"), comment:val("orderComment"), date:new Date().toLocaleDateString("sr-RS"), time:new Date().toLocaleTimeString("sr-RS",{hour:"2-digit",minute:"2-digit"}) };
+  const orders=getOrders(); orders.unshift(o); setOrders(orders);
+  ["orderProduct","orderQty","orderAmount","orderComment"].forEach(id=>document.getElementById(id).value="");
+  renderAll(); alert("Porudžbina je sačuvana");
+}
+function renderOrders(){
+  const orders=getOrders();
+  document.getElementById("ordersList").innerHTML = orders.length ? orders.map(o=>`<div class="report"><b>${escapeHtml(o.salonName)}</b><div class="muted">${escapeHtml(o.product)} | ${escapeHtml(o.qty||"—")} | ${Number(o.amount||0).toLocaleString("sr-RS")} RSD</div><div class="tiny">${escapeHtml(o.userName)} / ${o.date} ${o.time}</div><div>${escapeHtml(o.comment||"")}</div></div>`).join("") : `<p class="muted">Još nema porudžbina.</p>`;
+}
+
+function renderUsers(){
+  if(!currentUser || currentUser.role!=="admin")return;
+  const users=getUsers();
+  document.getElementById("usersList").innerHTML=users.map(u=>`<div class="user"><div class="between"><div><b>${escapeHtml(u.name)}</b><div class="muted">${escapeHtml(u.email)} | ${u.role}</div><div class="tiny">Plaćeno: ${u.paid?"DA":"NE"} | Status: ${u.blocked?"BLOKIRAN":"AKTIVAN"}</div></div><div class="row"><button class="${u.blocked?'success':'danger'}" onclick="toggleBlock(${u.id})">${u.blocked?'Odblokiraj':'Blokiraj'}</button><button class="secondary" onclick="togglePaid(${u.id})">${u.paid?'Označi neplaćeno':'Označi plaćeno'}</button></div></div></div>`).join("");
+}
+function addUser(){
+  const users=getUsers();
+  const u={id:Date.now(),name:val("userName"),email:val("userEmail"),password:document.getElementById("userPassword").value,role:document.getElementById("userRole").value,blocked:false,paid:true};
+  if(!u.name||!u.email||!u.password){alert("Popuni ime, email i lozinku");return}
+  users.push(u); setUsers(users); ["userName","userEmail","userPassword"].forEach(id=>document.getElementById(id).value=""); renderUsers();
+}
+function toggleBlock(id){ setUsers(getUsers().map(u=>u.id===id?{...u,blocked:!u.blocked}:u)); renderUsers(); }
+function togglePaid(id){ setUsers(getUsers().map(u=>u.id===id?{...u,paid:!u.paid,blocked:u.paid?true:u.blocked}:u)); renderUsers(); }
+
+function exportReports(){
+  const rows=getVisits(); if(!rows.length){alert("Nema izveštaja za export");return}
+  const header=["Datum","Vreme","Komercijalista","Salon","Rezultat","Proizvod","Promet","PIB","Komentar","Sledeca poseta"];
+  const csv=[header,...rows.map(v=>[v.date,v.time,v.userName,v.salonName,v.result,v.product,v.amount,v.pib,v.comment,v.nextVisit])].map(r=>r.map(x=>`"${String(x||"").replaceAll('"','""')}"`).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="dnevni_izvestaji.csv"; a.click(); URL.revokeObjectURL(url);
+}
+
+function val(id){return document.getElementById(id).value.trim()}
+function escapeHtml(str){ return String(str||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+function escapeAttr(str){ return escapeHtml(str).replaceAll("\n"," "); }
+
+if(currentUser) renderApp();
+</script>
+</body>
+</html>
