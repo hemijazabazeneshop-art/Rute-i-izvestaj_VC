@@ -83,12 +83,10 @@
     <h1>ALM DISTRIBUCIJA</h1>
     <p class="muted">Terenska aplikacija za zaposlene, kontrolora i administratora</p>
     <div class="notice">
-      Demo zaposleni: <b>zaposleni@firma.rs</b> / <b>123456</b><br>
-      Demo kontrolor: <b>kontrolor@firma.rs</b> / <b>123456</b><br>
-      Demo admin: <b>admin@firma.rs</b> / <b>admin123</b>
+      Unesite korisničke podatke za pristup aplikaciji.
     </div>
-    <input id="loginEmail" placeholder="Email" value="zaposleni@firma.rs">
-    <input id="loginPassword" type="password" placeholder="Lozinka" value="123456">
+    <input id="loginEmail" placeholder="Email" >
+    <input id="loginPassword" type="password" placeholder="Lozinka" >
     <button class="primary full" onclick="login()">Uđi</button>
   </div>
 
@@ -119,19 +117,19 @@
         <div class="card">
           <div class="between">
             <h2>Dnevna ruta</h2>
-            <span class="tag blue-tag">15 najbližih</span>
+            <span class="tag blue-tag">15 salona</span>
           </div>
           <div class="green-note">
-            Nova logika: aplikacija uzima GPS lokaciju zaposlenih, pretvara adrese u koordinate i bira 15 najbližih salona. Prvi put može da traje jer se adrese geokodiraju.
+            Nova logika: aplikacija uzima GPS lokaciju zaposlenih, pretvara adrese u koordinate i bira 15 salona. Prvi put može da traje jer se adrese geokodiraju.
           </div>
           <input id="workerSearch" placeholder="Ograniči pretragu: Zemun, Vračar, NBG..." oninput="renderWorkerRoute()">
           <div class="row">
-            <button class="primary" onclick="findNearest15()">Pronađi 15 najbližih</button>
+            <button class="primary" onclick="makeClusterRoute()">Napravi dnevnu rutu</button>
             <button class="secondary" onclick="makeDailyRoute()">Otvori rutu u Maps</button>
-            <button class="secondary" onclick="useMyLocation()">Moja lokacija</button>
+            <button class="secondary" onclick="useMyLocation()">Uključi lokaciju</button>
           </div>
           <div class="progress"><div id="geoProgress"></div></div>
-          <p class="muted" id="locationText">Klikni “Moja lokacija” ili “Pronađi 15 najbližih”. Ruta neće ponavljati salone za koje je već sačuvana poseta.</p>
+          <p class="muted" id="locationText">Pripremi dnevnu rutu i otvori navigaciju.</p>
           <div id="workerRouteList" class="scroll-list"></div>
         </div>
 
@@ -164,6 +162,19 @@
           <button class="primary full" onclick="saveVisit()">Sačuvaj posetu</button>
           <button class="success full" style="margin-top:10px" onclick="finishDay()">Završi dan i pošalji izveštaj</button>
         </div>
+      </div>
+    </section>
+
+
+    <section id="SviSaloni" class="section">
+      <div class="card">
+        <div class="between">
+          <h2>Svi saloni</h2>
+          <span class="tag blue-tag">217 salona</span>
+        </div>
+        <p class="muted">Ovde zaposleni može da pronađe bilo koji salon iz baze i da odmah otvori navigaciju do njega.</p>
+        <input id="allSalonSearch" placeholder="Pretraga: naziv, ulica, opština, telefon..." oninput="renderAllSalonsList()">
+        <div id="allSalonsList" class="scroll-list"></div>
       </div>
     </section>
 
@@ -215,7 +226,8 @@ const LS = {
   reports: "route_reports_v4",
   daily: "route_daily_v4",
   current: "route_current_v4",
-  coords: "route_coords_v4"
+  coords: "route_coords_v4",
+  cycle: "route_cycle_v4"
 };
 
 let currentUser = null;
@@ -226,9 +238,9 @@ let isGeocoding = false;
 function seed() {
   if (!localStorage.getItem(LS.users)) {
     localStorage.setItem(LS.users, JSON.stringify([
-      {id:1, name:"Zaposleni Demo", email:"zaposleni@firma.rs", password:"123456", role:"worker", blocked:false, paid:true},
-      {id:2, name:"Kontrolor Demo", email:"kontrolor@firma.rs", password:"123456", role:"manager", blocked:false, paid:true},
-      {id:3, name:"Admin Demo", email:"admin@firma.rs", password:"admin123", role:"admin", blocked:false, paid:true}
+      {id:1, name:"Zaposleni", email:"zaposleni@firma.rs", password:"123456", role:"worker", blocked:false, paid:true},
+      {id:2, name:"Kontrolor", email:"kontrolor@firma.rs", password:"123456", role:"manager", blocked:false, paid:true},
+      {id:3, name:"Administrator", email:"admin@firma.rs", password:"admin123", role:"admin", blocked:false, paid:true}
     ]));
   }
   if (!localStorage.getItem(LS.salons)) localStorage.setItem(LS.salons, JSON.stringify(INITIAL_SALONS));
@@ -247,6 +259,8 @@ function getDailyIds() { return JSON.parse(localStorage.getItem(LS.daily) || "[]
 function setDailyIds(x) { localStorage.setItem(LS.daily, JSON.stringify(x)); }
 function getCoords() { return JSON.parse(localStorage.getItem(LS.coords) || "{}"); }
 function setCoords(x) { localStorage.setItem(LS.coords, JSON.stringify(x)); }
+function getCycle() { return Number(localStorage.getItem(LS.cycle) || "1"); }
+function setCycle(x) { localStorage.setItem(LS.cycle, String(x)); }
 function val(id) { return document.getElementById(id).value.trim(); }
 function esc(x) { return String(x || "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -319,19 +333,35 @@ function selectedSalon() {
   return getSalons().find(s => s.id === selectedSalonId) || getSalons()[0];
 }
 
-function finishedSalonIds() {
-  // Saloni koji su već imali sačuvanu posetu ne ulaze u novu automatsku rutu.
-  return new Set(getReports().map(r => r.salonId));
+function finishedSalonIdsForCurrentCycle() {
+  return new Set(getReports().filter(r => Number(r.cycle || 1) === getCycle()).map(r => r.salonId));
 }
 
-function filteredSalons() {
+function availableSalonsForRoute() {
   const q = val("workerSearch").toLowerCase();
-  const finished = finishedSalonIds();
+  const finished = finishedSalonIdsForCurrentCycle();
+  const all = getSalons();
 
-  return getSalons().filter(s => {
+  let available = all.filter(s => {
     const matches = !q || (s.name + " " + s.address + " " + s.city + " " + s.phone + " " + s.contact).toLowerCase().includes(q);
     return matches && !finished.has(s.id);
   });
+
+  // Kada su svi saloni završeni u ovom krugu, sistem automatski kreće novi krug.
+  if (available.length === 0 && all.length > 0) {
+    setCycle(getCycle() + 1);
+    setDailyIds([]);
+    available = all.filter(s => {
+      const matches = !q || (s.name + " " + s.address + " " + s.city + " " + s.phone + " " + s.contact).toLowerCase().includes(q);
+      return matches;
+    });
+  }
+
+  return available;
+}
+
+function filteredSalons() {
+  return availableSalonsForRoute();
 }
 
 function getDailyRoute() {
@@ -343,6 +373,7 @@ function getDailyRoute() {
 function renderAll() {
   renderStats();
   renderWorkerRoute();
+  renderAllSalonsList();
   renderVisitSelect();
   renderManagerReports();
   renderUsers();
@@ -386,6 +417,36 @@ function renderWorkerRoute() {
       </div>
     </div>`;
   }).join("") || "<p class='muted'>Nema salona u ruti.</p>";
+}
+
+
+function renderAllSalonsList() {
+  const q = (document.getElementById("allSalonSearch")?.value || "").toLowerCase().trim();
+  const all = getSalons().filter(s => {
+    const haystack = (s.name + " " + s.address + " " + s.city + " " + s.phone + " " + s.contact).toLowerCase();
+    return !q || haystack.includes(q);
+  });
+
+  const target = document.getElementById("allSalonsList");
+  if (!target) return;
+
+  target.innerHTML = all.map((s, i) => `
+    <div class="salon ${s.id === selectedSalonId ? "current" : ""}">
+      <div class="salon-head">
+        <span class="num">${i + 1}</span>
+        <div>
+          <h3>${esc(s.name)}</h3>
+          <div class="muted">${esc(query(s))}</div>
+          <div class="tiny">Tel: ${esc(s.phone || "nema")} ${s.contact ? " | Kontakt: " + esc(s.contact) : ""}</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="secondary" onclick="selectSalon(${s.id})">Učitaj mapu</button>
+        <button class="primary" onclick="navigateSalon(${s.id})">Navigacija</button>
+        <button class="secondary" onclick="quickVisit(${s.id})">Unos posete</button>
+      </div>
+    </div>
+  `).join("") || "<p class='muted'>Nema rezultata.</p>";
 }
 
 function renderVisitSelect() {
@@ -443,7 +504,7 @@ function useMyLocation(showAlert = true) {
   }
   navigator.geolocation.getCurrentPosition(pos => {
     currentLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    document.getElementById("locationText").innerText = "Lokacija uključena. Možeš da pronađeš 15 najbližih salona.";
+    document.getElementById("locationText").innerText = "Lokacija uključena. Možeš da pronađeš 15 salona.";
     if (showAlert) alert("Lokacija je uključena.");
   }, () => {
     document.getElementById("locationText").innerText = "Lokacija nije dozvoljena. Bez lokacije ne mogu da izračunam najbliže salone.";
@@ -451,19 +512,20 @@ function useMyLocation(showAlert = true) {
   });
 }
 
-async function findNearest15() {
+async function makeClusterRoute() {
   if (isGeocoding) return;
+
   if (!currentLatLng) {
     await requestLocationPromise();
-    if (!currentLatLng) return alert("Moraš dozvoliti lokaciju da bih izračunao najbliže salone.");
   }
 
   isGeocoding = true;
   setDailyIds([]);
-  const candidates = filteredSalons().filter(s => s.address && s.city).slice(0, 120);
+
+  const candidates = availableSalonsForRoute().filter(s => s.address && s.city).slice(0, 160);
   const coords = getCoords();
   const progress = document.getElementById("geoProgress");
-  document.getElementById("locationText").innerText = "Računam najbliže salone. Prvi put može trajati duže...";
+  document.getElementById("locationText").innerText = "Pripremam dnevnu rutu od 15 salona...";
 
   let processed = 0;
   for (const s of candidates) {
@@ -473,27 +535,42 @@ async function findNearest15() {
       await sleep(700);
     }
     processed++;
-    progress.style.width = Math.round((processed / candidates.length) * 100) + "%";
+    progress.style.width = Math.round((processed / Math.max(candidates.length, 1)) * 100) + "%";
   }
 
-  const ranked = candidates
+  const withCoords = candidates
     .filter(s => coords[s.id] && coords[s.id].lat && coords[s.id].lng)
-    .map(s => {
-      const d = haversine(currentLatLng.lat, currentLatLng.lng, coords[s.id].lat, coords[s.id].lng);
-      return {...s, distance:d};
-    })
-    .sort((a,b) => a.distance - b.distance)
+    .map(s => ({...s, lat: coords[s.id].lat, lng: coords[s.id].lng}));
+
+  if (!withCoords.length) {
+    isGeocoding = false;
+    return alert("Nema salona sa pronađenim koordinatama. Proveri adrese ili probaj drugi filter.");
+  }
+
+  let seed;
+  if (currentLatLng) {
+    seed = withCoords
+      .map(s => ({...s, distance: haversine(currentLatLng.lat, currentLatLng.lng, s.lat, s.lng)}))
+      .sort((a,b) => a.distance - b.distance)[0];
+  } else {
+    seed = withCoords[0];
+  }
+
+  // Logika: uzima se početni salon, zatim 14 salona geografski najbližih tom salonu.
+  // To pravi kompaktnu dnevnu zonu, a ne rasutu rutu po celom gradu.
+  const cluster = withCoords
+    .map(s => ({...s, clusterDistance: haversine(seed.lat, seed.lng, s.lat, s.lng)}))
+    .sort((a,b) => a.clusterDistance - b.clusterDistance)
     .slice(0, 15);
 
-  if (!ranked.length) {
-    isGeocoding = false;
-    return alert("Nema novih neposećenih salona sa pronađenim koordinatama. Probaj drugi filter ili dodaj nove salone.");
-  }
+  // Redosled obilaska: kreće od trenutne lokacije ako je dostupna, inače od prvog salona,
+  // zatim uvek bira najbliži sledeći salon iz grupe.
+  const ordered = orderNearestNeighbor(cluster, currentLatLng || {lat: seed.lat, lng: seed.lng});
 
-  setDailyIds(ranked.map(s => s.id));
-  selectedSalonId = ranked[0].id;
+  setDailyIds(ordered.map(s => s.id));
+  selectedSalonId = ordered[0].id;
   progress.style.width = "100%";
-  document.getElementById("locationText").innerText = "Ruta je napravljena od 15 najbližih salona.";
+  document.getElementById("locationText").innerText = "Dnevna ruta je spremna.";
   isGeocoding = false;
   renderAll();
 }
@@ -517,6 +594,31 @@ async function geocodeSalon(s) {
     if (data && data[0]) return { lat: Number(data[0].lat), lng: Number(data[0].lon), source: "osm" };
   } catch(e) {}
   return null;
+}
+
+function orderNearestNeighbor(points, start) {
+  const remaining = [...points];
+  const ordered = [];
+  let current = { lat: start.lat, lng: start.lng };
+
+  while (remaining.length) {
+    let bestIndex = 0;
+    let bestDistance = Infinity;
+
+    remaining.forEach((p, index) => {
+      const d = haversine(current.lat, current.lng, p.lat, p.lng);
+      if (d < bestDistance) {
+        bestDistance = d;
+        bestIndex = index;
+      }
+    });
+
+    const next = remaining.splice(bestIndex, 1)[0];
+    ordered.push(next);
+    current = { lat: next.lat, lng: next.lng };
+  }
+
+  return ordered;
 }
 
 function haversine(lat1, lon1, lat2, lon2) {
@@ -551,7 +653,8 @@ function saveVisit() {
     amount: val("visitAmount"),
     date: new Date().toLocaleDateString("sr-RS"),
     time: new Date().toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" }),
-    sent: false
+    sent: false,
+    cycle: getCycle()
   };
   const reports = getReports();
   reports.unshift(report);
