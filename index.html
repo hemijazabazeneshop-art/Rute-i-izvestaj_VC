@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SalonRoute - Najbliži saloni</title>
+  <title>ALM DISTRIBUCIJA - Rute</title>
   <style>
     * { box-sizing: border-box; }
     body { margin:0; font-family:Arial,sans-serif; background:#f4f7fb; color:#111827; padding:12px; padding-bottom:92px; }
@@ -80,14 +80,14 @@
 <div class="app">
 
   <div id="loginScreen" class="login card">
-    <h1>SalonRoute</h1>
-    <p class="muted">Terenska aplikacija za komercijaliste, kontrolora i administratora</p>
+    <h1>ALM DISTRIBUCIJA</h1>
+    <p class="muted">Terenska aplikacija za zaposlene, kontrolora i administratora</p>
     <div class="notice">
-      Demo komercijalista: <b>radnik@firma.rs</b> / <b>123456</b><br>
+      Demo zaposleni: <b>zaposleni@firma.rs</b> / <b>123456</b><br>
       Demo kontrolor: <b>kontrolor@firma.rs</b> / <b>123456</b><br>
       Demo admin: <b>admin@firma.rs</b> / <b>admin123</b>
     </div>
-    <input id="loginEmail" placeholder="Email" value="radnik@firma.rs">
+    <input id="loginEmail" placeholder="Email" value="zaposleni@firma.rs">
     <input id="loginPassword" type="password" placeholder="Lozinka" value="123456">
     <button class="primary full" onclick="login()">Uđi</button>
   </div>
@@ -96,7 +96,7 @@
     <div class="header">
       <div class="header-row">
         <div>
-          <h1>SalonRoute</h1>
+          <h1>ALM DISTRIBUCIJA</h1>
           <div class="sub" id="roleSubtitle">Dnevna ruta i izveštaj</div>
         </div>
         <div>
@@ -114,7 +114,7 @@
 
     <div id="blockedBox" class="notice hidden">Ovaj nalog je blokiran. Kontaktiraj administratora aplikacije.</div>
 
-    <section id="Radnik" class="section active">
+    <section id="Zaposleni" class="section active">
       <div class="layout">
         <div class="card">
           <div class="between">
@@ -122,7 +122,7 @@
             <span class="tag blue-tag">15 najbližih</span>
           </div>
           <div class="green-note">
-            Nova logika: aplikacija uzima GPS lokaciju radnika, pretvara adrese u koordinate i bira 15 najbližih salona. Prvi put može da traje jer se adrese geokodiraju.
+            Nova logika: aplikacija uzima GPS lokaciju zaposlenih, pretvara adrese u koordinate i bira 15 najbližih salona. Prvi put može da traje jer se adrese geokodiraju.
           </div>
           <input id="workerSearch" placeholder="Ograniči pretragu: Zemun, Vračar, NBG..." oninput="renderWorkerRoute()">
           <div class="row">
@@ -131,7 +131,7 @@
             <button class="secondary" onclick="useMyLocation()">Moja lokacija</button>
           </div>
           <div class="progress"><div id="geoProgress"></div></div>
-          <p class="muted" id="locationText">Klikni “Moja lokacija” ili “Pronađi 15 najbližih”. Browser će tražiti dozvolu za lokaciju.</p>
+          <p class="muted" id="locationText">Klikni “Moja lokacija” ili “Pronađi 15 najbližih”. Ruta neće ponavljati salone za koje je već sačuvana poseta.</p>
           <div id="workerRouteList" class="scroll-list"></div>
         </div>
 
@@ -170,7 +170,7 @@
     <section id="Kontrolor" class="section">
       <div class="card managerOnly">
         <div class="between">
-          <h2>Izveštaji radnika</h2>
+          <h2>Izveštaji zaposlenih</h2>
           <button class="secondary" onclick="exportReports()">Preuzmi CSV izveštaj</button>
         </div>
         <p class="muted">Kontrolor vidi izveštaje i preuzima ih za analizu.</p>
@@ -199,7 +199,7 @@
     </section>
 
     <div class="nav">
-      <button id="tabWorker" class="active workerTab" onclick="showSection('Radnik', this)">Radnik</button>
+      <button id="tabWorker" class="active workerTab" onclick="showSection('Zaposleni', this)">Zaposleni</button>
       <button id="tabManager" class="managerOnly" onclick="showSection('Kontrolor', this)">Izveštaji</button>
       <button id="tabAdmin" class="adminOnly" onclick="showSection('Admin', this)">Admin</button>
     </div>
@@ -226,7 +226,7 @@ let isGeocoding = false;
 function seed() {
   if (!localStorage.getItem(LS.users)) {
     localStorage.setItem(LS.users, JSON.stringify([
-      {id:1, name:"Radnik Demo", email:"radnik@firma.rs", password:"123456", role:"worker", blocked:false, paid:true},
+      {id:1, name:"Zaposleni Demo", email:"zaposleni@firma.rs", password:"123456", role:"worker", blocked:false, paid:true},
       {id:2, name:"Kontrolor Demo", email:"kontrolor@firma.rs", password:"123456", role:"manager", blocked:false, paid:true},
       {id:3, name:"Admin Demo", email:"admin@firma.rs", password:"admin123", role:"admin", blocked:false, paid:true}
     ]));
@@ -273,7 +273,7 @@ function startApp() {
 
   document.getElementById("userBadge").innerText = currentUser.name + " / " + roleLabel(currentUser.role);
   document.getElementById("roleSubtitle").innerText =
-    currentUser.role === "worker" ? "Dnevna ruta i slanje izveštaja" :
+    currentUser.role === "worker" ? "Dnevna ruta zaposlenog i slanje izveštaja" :
     currentUser.role === "manager" ? "Kontrola i preuzimanje izveštaja" :
     "Administracija pristupa";
 
@@ -291,7 +291,7 @@ function startApp() {
 function roleLabel(role) {
   if (role === "admin") return "admin";
   if (role === "manager") return "kontrolor";
-  return "komercijalista";
+  return "zaposleni";
 }
 
 function activeCheck() {
@@ -319,9 +319,19 @@ function selectedSalon() {
   return getSalons().find(s => s.id === selectedSalonId) || getSalons()[0];
 }
 
+function finishedSalonIds() {
+  // Saloni koji su već imali sačuvanu posetu ne ulaze u novu automatsku rutu.
+  return new Set(getReports().map(r => r.salonId));
+}
+
 function filteredSalons() {
   const q = val("workerSearch").toLowerCase();
-  return getSalons().filter(s => !q || (s.name + " " + s.address + " " + s.city + " " + s.phone + " " + s.contact).toLowerCase().includes(q));
+  const finished = finishedSalonIds();
+
+  return getSalons().filter(s => {
+    const matches = !q || (s.name + " " + s.address + " " + s.city + " " + s.phone + " " + s.contact).toLowerCase().includes(q);
+    return matches && !finished.has(s.id);
+  });
 }
 
 function getDailyRoute() {
@@ -449,7 +459,8 @@ async function findNearest15() {
   }
 
   isGeocoding = true;
-  const candidates = filteredSalons().filter(s => s.address && s.city).slice(0, 80);
+  setDailyIds([]);
+  const candidates = filteredSalons().filter(s => s.address && s.city).slice(0, 120);
   const coords = getCoords();
   const progress = document.getElementById("geoProgress");
   document.getElementById("locationText").innerText = "Računam najbliže salone. Prvi put može trajati duže...";
@@ -476,7 +487,7 @@ async function findNearest15() {
 
   if (!ranked.length) {
     isGeocoding = false;
-    return alert("Nisam uspeo da pronađem koordinate za salone. Probaj da filtriraš po Beograd / Zemun / Vračar ili proveri adrese.");
+    return alert("Nema novih neposećenih salona sa pronađenim koordinatama. Probaj drugi filter ili dodaj nove salone.");
   }
 
   setDailyIds(ranked.map(s => s.id));
@@ -573,7 +584,7 @@ function renderManagerReports() {
   document.getElementById("managerReports").innerHTML = `
     <table>
       <thead>
-        <tr><th>Datum</th><th>Radnik</th><th>Salon</th><th>Rezultat</th><th>Komentar</th><th>Promet</th></tr>
+        <tr><th>Datum</th><th>Zaposleni</th><th>Salon</th><th>Rezultat</th><th>Komentar</th><th>Promet</th></tr>
       </thead>
       <tbody>
         ${reports.map(r => `<tr>
@@ -592,14 +603,14 @@ function renderManagerReports() {
 function exportReports() {
   const reports = getReports();
   if (!reports.length) return alert("Nema izveštaja za preuzimanje.");
-  const header = ["Datum","Vreme","Radnik","Salon","Adresa","Rezultat","Komentar","Prodato","Promet","Poslat"];
+  const header = ["Datum","Vreme","Zaposleni","Salon","Adresa","Rezultat","Komentar","Prodato","Promet","Poslat"];
   const rows = reports.map(r => [r.date,r.time,r.userName,r.salonName,r.address,r.result,r.comment,r.sale,r.amount,r.sent ? "DA" : "NE"]);
   const csv = [header, ...rows].map(row => row.map(v => `"${String(v || "").replaceAll('"','""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "izvestaji_radnika.csv";
+  a.download = "izvestaji_zaposlenih.csv";
   a.click();
   URL.revokeObjectURL(url);
 }
