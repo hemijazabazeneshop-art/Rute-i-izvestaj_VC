@@ -117,13 +117,14 @@
             <span class="tag blue-tag">15 salona</span>
           </div>
           <div class="green-note">
-            Nova logika: aplikacija uzima GPS lokaciju zaposlenih, pretvara adrese u koordinate i bira 15 salona. Prvi put može da traje jer se adrese geokodiraju.
+            Ruta može automatski da se napravi, ali komercijalista sada može i sam da promeni redosled, izbaci salon, preskoči salon uz razlog i doda bilo koji salon iz baze u današnju rutu.
           </div>
           <input id="workerSearch" placeholder="Ograniči pretragu: Zemun, Vračar, NBG..." oninput="renderWorkerRoute()">
           <div class="row">
             <button class="primary" onclick="makeClusterRoute()">Napravi dnevnu rutu</button>
             <button class="secondary" onclick="makeDailyRoute()">Otvori rutu u Maps</button>
             <button class="secondary" onclick="useMyLocation()">Uključi lokaciju</button>
+            <button class="warning" onclick="resetManualRoute()">Vrati predlog rute</button>
           </div>
           <div class="progress"><div id="geoProgress"></div></div>
           <p class="muted" id="locationText">Pripremi dnevnu rutu i otvori navigaciju.</p>
@@ -169,7 +170,7 @@
           <h2>Svi saloni</h2>
           <span class="tag blue-tag">217 salona</span>
         </div>
-        <p class="muted">Ovde zaposleni može da pronađe bilo koji salon iz baze i da odmah otvori navigaciju do njega.</p>
+        <p class="muted">Ovde komercijalista može da pronađe bilo koji salon iz baze, doda ga u današnju rutu, otvori navigaciju ili odmah upiše posetu.</p>
         <input id="allSalonSearch" placeholder="Pretraga: naziv, ulica, opština, telefon..." oninput="renderAllSalonsList()">
         <div id="allSalonsList" class="scroll-list"></div>
       </div>
@@ -218,14 +219,17 @@
 const INITIAL_SALONS = [{"id": 1, "name": "Salon Avangard", "address": "Bul.Zorana Đinđića 77 lok.1-5", "city": "Beograd- NBG", "phone": "063-77-55-861", "contact": "Tanja Simonović", "status": "Nije obiđen"}, {"id": 2, "name": "Estetique Prive", "address": "Admirala Geparta 17", "city": "Savski venac", "phone": "062 855 35 22", "contact": "Saska Popovic", "status": "Nije obiđen"}, {"id": 3, "name": "Salon A & V", "address": "Alekse Nenadovica 36", "city": "Vracar", "phone": "", "contact": "Sladjana Ivanovic", "status": "Nije obiđen"}, {"id": 4, "name": "Salon Marko", "address": "Bezanijska 49", "city": "Zemun", "phone": "", "contact": "Marko Mojsic", "status": "Nije obiđen"}, {"id": 5, "name": "Studio SHINE S", "address": "Borcanski put", "city": "Beograd", "phone": "063 17 11 287", "contact": "", "status": "Nije obiđen"}, {"id": 6, "name": "Happy People", "address": "Braće Krsmanovića", "city": "Beograd- Blizu nas", "phone": "062-120-44-77", "contact": "Nikola", "status": "Nije obiđen"}, {"id": 7, "name": "Miss Friz", "address": "Braće Miladinov 6", "city": "Beograd- zvezdara", "phone": "065-52-56-822", "contact": "", "status": "Nije obiđen"}, {"id": 8, "name": "Alis Hair", "address": "branicevska 7", "city": "Beograd - kod hrama", "phone": "066 6666 529", "contact": "Nina manager", "status": "Nije obiđen"}, {"id": 9, "name": "Frizerski salon Dragana", "address": "bul Kralja Aleksandra 198 , ulaz iz Gajeve", "city": "Beograd - blizu nas", "phone": "060 714 19 13", "contact": "", "status": "Nije obiđen"}, {"id": 10, "name": "La Marta", "address": "Bul Mihajla Pupiba 10 D lokal 44", "city": "Beograd - YUBC Centar", "phone": "06 315 10 12", "contact": "Marta GOCA", "status": "Nije obiđen"}, {"id": 11, "name": "La Fee", "address": "Bul Mihajla Pupiba 10 D lokal 44", "city": "Beograd - YUBC Centar", "phone": "060 47 11 700", "contact": "", "status": "Nije obiđen"}, {"id": 12, "name": "Gold Steel", "address": "Bul Mihajla Pupiba 10 D lokal 44", "city": "Beograd - YUBC Centar", "phone": "063 749 5886", "contact": "", "status": "Nije obiđen"}, {"id": 13, "name": "Bucka", "address": "Bul. Kralja Aleksandra 173", "city": "Beograd- Blizu nas", "phone": "063-77-57-167", "contact": "Zmaj Jovina 5 nova adresa", "status": "Nije obiđen"}, {"id": 14, "name": "Frizerski Studio Nozak", "address": "bul. Patrijarha Pavla 3", "city": "Novi Sad", "phone": "381 62 97 11 257", "contact": "Dijana Miskovoc", "status": "Nije obiđen"}, {"id": 15, "name": "Hair style 011", "address": "Bul. Zorana Djindjica 71", "city": "Beograd -NBG", "phone": "064 2371020", "contact": "Ivan", "status": "Nije obiđen"}, {"id": 16, "name": "Nice and easy by Bane", "address": "Bul. Zorana Djindjica 73", "city": "Beograd - NBG", "phone": "064 3025641", "contact": "Bane", "status": "Nije obiđen"}, {"id": 17, "name": "Ivana Studio Nice", "address": "Bul.Zorana Đinđića 68", "city": "Beograd - NBG", "phone": "063-76-06-150", "contact": "iVANA", "status": "Nije obiđen"}, {"id": 18, "name": "Kristal Beauty House", "address": "Bulevar Arsenija Carnojevica 68", "city": "Novi Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 19, "name": "Jovana Gsde je bucka bila", "address": "Bulevar Kralja Aleksandra", "city": "Beograd- Blizu nas", "phone": "065 304 80 64", "contact": "Jovana", "status": "Nije obiđen"}, {"id": 20, "name": "Bolonja Plus", "address": "Bulevar kralja Aleksandra  155", "city": "Zvezdara", "phone": "063 541 829", "contact": "Marija Besevic", "status": "Nije obiđen"}, {"id": 21, "name": "Studio Ana 81", "address": "Bulevar Zorana Đinđica 95", "city": "Novi Beograd", "phone": "", "contact": "Ana Krivokuca", "status": "Nije obiđen"}, {"id": 22, "name": "Coka", "address": "Cara Nikolaja II 45", "city": "Beograd - Vracar", "phone": "065 606 64 96", "contact": "", "status": "Nije obiđen"}, {"id": 23, "name": "Beauty Lounge", "address": "Cara Nikolaja II 77", "city": "Beograd- Vracar", "phone": "064-251-49-34", "contact": "Biljana", "status": "Nije obiđen"}, {"id": 24, "name": "Aria", "address": "Dalmatinska 23", "city": "Beograd - centar kod botanicke", "phone": "069 173 97 31", "contact": "Marija", "status": "Nije obiđen"}, {"id": 25, "name": "Milena Divac", "address": "Danicareva 1", "city": "Vracar", "phone": "", "contact": "Milena Divac", "status": "Nije obiđen"}, {"id": 26, "name": "Studio lepote Sofija", "address": "Deli Radivoja 15", "city": "Beograd- Vozdovac", "phone": "061 28 339 39", "contact": "", "status": "Nije obiđen"}, {"id": 27, "name": "Frizerski salon Sova", "address": "Dimitrija Tucovica", "city": "Beograd - blizu nas", "phone": "064 57 60 790", "contact": "", "status": "Nije obiđen"}, {"id": 28, "name": "NDL", "address": "Djakovacka 6", "city": "Beograd - pored nas", "phone": "065 95 633 72", "contact": "Gordana Ruzicic", "status": "Nije obiđen"}, {"id": 29, "name": "Head Studio DD", "address": "djordja rajkovica 17", "city": "Novi Sad", "phone": "069-40-70-700", "contact": "Duska", "status": "Nije obiđen"}, {"id": 30, "name": "Salon Danijela", "address": "Dr Ivana Ribara 115 b , Zanatski centar", "city": "Brograd -NBG", "phone": "062 32 44 77", "contact": "Gordana Domazec", "status": "Nije obiđen"}, {"id": 31, "name": "Frizerski salon Hair", "address": "dr. Mladena Stojanovica 15 a", "city": "Zrenjanin - Elemir", "phone": "063 702 49 06", "contact": "Zorica Curic", "status": "Nije obiđen"}, {"id": 32, "name": "Vesna", "address": "Dragoslava Jovanovica 13 interfon milovanovic", "city": "Beograd - Skupstina", "phone": "063 228311", "contact": "Vesna", "status": "Nije obiđen"}, {"id": 33, "name": "Beauty Mary", "address": "Dubljanska 22 - Ivana  -- nije više u ovom salonu", "city": "Beograd- Vracar", "phone": "064-16-34-236", "contact": "Marija gazdarica 0641606410", "status": "Nije obiđen"}, {"id": 34, "name": "Prointer sistem", "address": "Dunavska bb", "city": "Dorcol", "phone": "", "contact": "Salon u sklopu firme", "status": "Nije obiđen"}, {"id": 35, "name": "Mancic Sanja , MS Studio", "address": "Dusana Vlajica 15", "city": "Beograd - zarkovo", "phone": "060 3716 988", "contact": "", "status": "Nije obiđen"}, {"id": 36, "name": "Salon Kika", "address": "Dvadeset drugog oktobra 6", "city": "Zemun", "phone": "", "contact": "Svetlana Nikolic", "status": "Nije obiđen"}, {"id": 37, "name": "Salon Fidi", "address": "Đakovačka 21", "city": "Beograd- preko puta nas", "phone": "063-26-25-75", "contact": "", "status": "Nije obiđen"}, {"id": 38, "name": "Anja Nikolic", "address": "Đure Daničića 5", "city": "Beograd - stari grad", "phone": "060-13-09-247", "contact": "Anja Nikolić", "status": "Nije obiđen"}, {"id": 39, "name": "Pro And Cuk", "address": "excluziv ima 7 salona", "city": "Beograd", "phone": "060 30 33 221", "contact": "", "status": "Nije obiđen"}, {"id": 40, "name": "Di Art", "address": "Golubacka 6", "city": "Beograd - Vracar", "phone": "065 65 99 712", "contact": "Maja", "status": "Nije obiđen"}, {"id": 41, "name": "Cut and Go 21", "address": "Gunduliceva 15", "city": "Novi Sad", "phone": "066 800 81 92", "contact": "Aleksandra Aleksic", "status": "Nije obiđen"}, {"id": 42, "name": "Studio A I M", "address": "Gvoydiceva 2", "city": "Zvezdara", "phone": "069 1781 115", "contact": "Rada Popadic", "status": "Nije obiđen"}, {"id": 43, "name": "Bellora", "address": "Ilije Birčanina 29,", "city": "Novi Sad", "phone": "066-50-45-975", "contact": "", "status": "Nije obiđen"}, {"id": 44, "name": "Nada I Maja", "address": "Ilije Ognjanovica 8", "city": "Novi Sad", "phone": "060 37 64 597", "contact": "nada", "status": "Nije obiđen"}, {"id": 45, "name": "Milka salon 021", "address": "Jastrebacka 49", "city": "Novi Sad", "phone": "060 641 30 28", "contact": "Milka", "status": "Nije obiđen"}, {"id": 46, "name": "Madmazel", "address": "Jedrenska 8", "city": "Beograd- Blizu nas", "phone": "064-27-06-683", "contact": "blizu kristine", "status": "Nije obiđen"}, {"id": 47, "name": "Jovana Dojcinovic", "address": "Jedrenska 8", "city": "Beograd- Blizu nas", "phone": "064 98 43 898", "contact": "Jovana", "status": "Nije obiđen"}, {"id": 48, "name": "G line", "address": "jezero bb", "city": "Zlatibor", "phone": "", "contact": "Dragana Kaljevic", "status": "Nije obiđen"}, {"id": 49, "name": "Lulu", "address": "Jurija Gagarina 14 e", "city": "Beograd - NBG belvil", "phone": "060 444 97 66", "contact": "", "status": "Nije obiđen"}, {"id": 50, "name": "Vortex Beauty Hair", "address": "Jurija Gagarina 14 L lok 6", "city": "Beograd - NBG belvil", "phone": "060 086 32 56", "contact": "", "status": "Nije obiđen"}, {"id": 51, "name": "Hair & Makeup TEAM", "address": "Jurija Gagarina 14e", "city": "Beograd- NBG- Belvil", "phone": "065 500 63 36", "contact": "Dragana", "status": "Nije obiđen"}, {"id": 52, "name": "Salon Cec", "address": "Jurija Gagarina 14l", "city": "Novi Beograd", "phone": "", "contact": "Svetlana Bogicevic", "status": "Nije obiđen"}, {"id": 53, "name": "Cut and Talk", "address": "Jurija Gagarina 14ž", "city": "Beograd- NBG - belvil", "phone": "060-67-81-901", "contact": "", "status": "Nije obiđen"}, {"id": 54, "name": "Danijela Šiz za najbolji friz", "address": "Jurija gagarina 155 b ,Piramida,prekoputa meka", "city": "Beograd - NBG", "phone": "062-22-80-28", "contact": "Danijela", "status": "Nije obiđen"}, {"id": 55, "name": "Frizerski salon Masa", "address": "Jurija Gagarina 155 b/1", "city": "Beograd - NBG", "phone": "064 14 91 943", "contact": "", "status": "Nije obiđen"}, {"id": 56, "name": "Jazzy Style", "address": "Jurija Gagarina 229 , TC Enjub lokal 103", "city": "Beograd - NBG Enjub", "phone": "062 14 98 913", "contact": "", "status": "Nije obiđen"}, {"id": 57, "name": "VS Studio", "address": "Jurija Gagarina 231 lok 139", "city": "Beograd - NBG", "phone": "060 5555 181", "contact": "Vesna Savic", "status": "Nije obiđen"}, {"id": 58, "name": "Seka 114", "address": "Juzni Bulevar 114", "city": "Beograd", "phone": "061 612 82 74", "contact": "Seka I Sneza", "status": "Nije obiđen"}, {"id": 59, "name": "Nadaly", "address": "Kajmakcalanska 4", "city": "Beograd- Blizu nas", "phone": "062 120 90 13", "contact": "Katarina -radnica", "status": "Nije obiđen"}, {"id": 60, "name": "Salon Ram", "address": "Kajmakčalanska 8/1", "city": "Beograd - blizu nas", "phone": "062-58-57-05", "contact": "Filip", "status": "Nije obiđen"}, {"id": 61, "name": "Mina Revlon Redken", "address": "Kajmakčalanska 9", "city": "Beograd - blizu nas", "phone": "064-02-94-017", "contact": "", "status": "Nije obiđen"}, {"id": 62, "name": "Trend", "address": "Karadjordjeva 120", "city": "Valjevo", "phone": "", "contact": "Trajko Krstic", "status": "Nije obiđen"}, {"id": 63, "name": "Pink 3", "address": "Karađorđeva 20", "city": "Smederevo", "phone": "", "contact": "Dragana Milovanovic", "status": "Nije obiđen"}, {"id": 64, "name": "Studio Perfekt", "address": "Karađorđeva 27", "city": "Sabac", "phone": "", "contact": "Ljiljana Radovic", "status": "Nije obiđen"}, {"id": 65, "name": "Ivana", "address": "Kneginje Ljubice 32", "city": "Beograd- dorcol", "phone": "063-81-13-942", "contact": "Ivana", "status": "Nije obiđen"}, {"id": 66, "name": "Bed Head", "address": "Kornelija Stankovica 29", "city": "Novi Sad", "phone": "063-83-11-737", "contact": "Verica", "status": "Nije obiđen"}, {"id": 67, "name": "Elies Beauty", "address": "Kosovska 24", "city": "Novi Sad", "phone": "", "contact": "Elie Hakim", "status": "Nije obiđen"}, {"id": 68, "name": "Mystic", "address": "Kralja Aleksandra 33", "city": "Sabac", "phone": "063 7484 811", "contact": "Marija Zikic", "status": "Nije obiđen"}, {"id": 69, "name": "Tres Amigas", "address": "Krunska 81", "city": "Beograd- Vracar", "phone": "064-111-99-02", "contact": "Irena,", "status": "Nije obiđen"}, {"id": 70, "name": "Kardashian beauty", "address": "Laze Kostica 8", "city": "Novi Sad", "phone": "061 649 43 72", "contact": "", "status": "Nije obiđen"}, {"id": 71, "name": "Zenski Kutak Beti i NALE", "address": "Luneta Milanovića 3", "city": "Beograd - konjarnik", "phone": "064-38-88-983", "contact": "Beti", "status": "Nije obiđen"}, {"id": 72, "name": "Eleonora", "address": "Majke Jevrosime 35", "city": "Beograd", "phone": "064 1378435", "contact": "Eleonora", "status": "Nije obiđen"}, {"id": 73, "name": "Beaity Centar", "address": "Majke Jevrosime 35", "city": "Beograd", "phone": "064 363 55 85", "contact": "", "status": "Nije obiđen"}, {"id": 74, "name": "Gospodjica Salon", "address": "Majke Jevrosime 40", "city": "Beograd", "phone": "061 155 99 95", "contact": "Dragana", "status": "Nije obiđen"}, {"id": 75, "name": "Bomaz by Maja", "address": "Makenzijeva 35", "city": "Vracar", "phone": "063 541 729", "contact": "Maja Mirkovic", "status": "Nije obiđen"}, {"id": 76, "name": "Salon lepote Moment", "address": "Maksima Gorkog 57", "city": "Beograd - Vracar", "phone": "063 830 82 77", "contact": "", "status": "Nije obiđen"}, {"id": 77, "name": "Krkelic", "address": "Marka Oreskovica 6", "city": "Beograd - blizu nas", "phone": "061 148 09 07", "contact": "", "status": "Nije obiđen"}, {"id": 78, "name": "Frajla", "address": "Marsala Birjuzova 53", "city": "Beograd- obilicev venac", "phone": "064 1710908", "contact": "Danijela", "status": "Nije obiđen"}, {"id": 79, "name": "Salon SD", "address": "Masarikova 26", "city": "Sabac", "phone": "", "contact": "Sofija Bratic", "status": "Nije obiđen"}, {"id": 80, "name": "Ko te Sisa", "address": "Masarikova 8", "city": "Arilje", "phone": "060 555 13 52", "contact": "Maja Savovic", "status": "Nije obiđen"}, {"id": 81, "name": "salon n5", "address": "Mice Popovica 5", "city": "Dorcol", "phone": "", "contact": "Nina Zijadic", "status": "Nije obiđen"}, {"id": 82, "name": "Kosmopolitan Užice", "address": "Milana Rakića 10", "city": "Užice", "phone": "069-33-59-050", "contact": "", "status": "Nije obiđen"}, {"id": 83, "name": "Studio Solo per te", "address": "Milesevska 38", "city": "Beograd - Vracar", "phone": "011 24 55 634", "contact": "Ivana", "status": "Nije obiđen"}, {"id": 84, "name": "Chic and Shine", "address": "Milesevska 67, lokal br. 7 ; ulaz iz Vojvode Petka", "city": "Beograd- Blizu nas", "phone": "063-23-85-72", "contact": "", "status": "Nije obiđen"}, {"id": 85, "name": "Beauty Hub", "address": "Milinka Kusica 7", "city": "Ivanjica", "phone": "069 20 250 89", "contact": "Dragana Zlatic", "status": "Nije obiđen"}, {"id": 86, "name": "Magnificent", "address": "Milutina Milankovica 7B", "city": "Novi Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 87, "name": "Terapy Hair", "address": "Mirijevski Bulevar 18b", "city": "Beograd - Mirjevo", "phone": "060 35 35 349", "contact": "Natasa Skaljac", "status": "Nije obiđen"}, {"id": 88, "name": "Dejan Velicki", "address": "Mise Dimitrijevica 16", "city": "Novi Sad", "phone": "063 39 00 46", "contact": "Dejan", "status": "Nije obiđen"}, {"id": 89, "name": "Milan Sarić", "address": "Mišarska 4a", "city": "Beograd - stari grad", "phone": "064-44-17-758", "contact": "Milan Sarić", "status": "Nije obiđen"}, {"id": 90, "name": "Srđan", "address": "Mutapova 26", "city": "Beograd - Vracar", "phone": "065-60-00-615", "contact": "Srđan", "status": "Nije obiđen"}, {"id": 91, "name": "Salon Luna", "address": "Nedeljka Gvozdenovića 14", "city": "Beograd- Bezanija", "phone": "064-61-30-183", "contact": "Jelica i Slavijana", "status": "Nije obiđen"}, {"id": 92, "name": "Fancy studio Twins- Vesna Tomic", "address": "Nikole Cupica 4", "city": "Sabac", "phone": "061 680 17 79", "contact": "Vesna", "status": "Nije obiđen"}, {"id": 93, "name": "Hair studio P&K", "address": "Novopazarska 40", "city": "Beograd-vracar", "phone": "061 248 53 43", "contact": "Pavle", "status": "Nije obiđen"}, {"id": 94, "name": "Lady Beauty", "address": "Omladinskih brigada 86z", "city": "Novi Beograd", "phone": "", "contact": "Dragana Bekvalac", "status": "Nije obiđen"}, {"id": 95, "name": "Hair studio Maksic", "address": "Partizanska 32", "city": "Backi Jarak", "phone": "069 404 77 79 Tatjana", "contact": "Tatjana I Jelena Maksic", "status": "Nije obiđen"}, {"id": 96, "name": "Nefertiti", "address": "Patrijarha Gavrila 14", "city": "Vracar", "phone": "062660 001", "contact": "Jelena Cvetkovic", "status": "Nije obiđen"}, {"id": 97, "name": "Ivan", "address": "Pavla Orlovica 4", "city": "Beograd - Vracar", "phone": "069 41 25 512", "contact": "", "status": "Nije obiđen"}, {"id": 98, "name": "Studio Djorem", "address": "Pavla Vuisica 53", "city": "Altina", "phone": "", "contact": "Jovana Novakovic", "status": "Nije obiđen"}, {"id": 99, "name": "Xwrio", "address": "Petlovo brdo , kod vertiga", "city": "Beograd - Petlovo Brdo", "phone": "063-80-18-353", "contact": "Zorica", "status": "Nije obiđen"}, {"id": 100, "name": "Salon Salvadore", "address": "Petra Drapšina 36", "city": "Novi Sad", "phone": "063-729-21-67", "contact": "Milena", "status": "Nije obiđen"}, {"id": 101, "name": "Nadja Simic", "address": "Petrogradska 13", "city": "Beograd- Vracar", "phone": "066 083 492", "contact": "Nada Simic", "status": "Nije obiđen"}, {"id": 102, "name": "Mira Salon ?", "address": "Pjera Krizanica 1 ulaz iz kusinih rudara", "city": "Beograd- mirjevo", "phone": "064-12 99 099", "contact": "Mira", "status": "Nije obiđen"}, {"id": 103, "name": "Zmajoni", "address": "Pop Stojanova 17", "city": "Beograd - blizu nas", "phone": "069 2018416", "contact": "Maja stefanovic", "status": "Nije obiđen"}, {"id": 104, "name": "Fen I Cetka", "address": "Pop Stojanova 3", "city": "Vracar", "phone": "", "contact": "Miodrag Mirjacic", "status": "Nije obiđen"}, {"id": 105, "name": "Nenad Mudrinic", "address": "Pozarevacka 29", "city": "Beograd - Vracar", "phone": "069 156 77 77", "contact": "Nenad", "status": "Nije obiđen"}, {"id": 106, "name": "Premijer Saloni", "address": "Premijer GOLD", "city": "Beograd - blizu nas", "phone": "011  244 08 71", "contact": "", "status": "Nije obiđen"}, {"id": 107, "name": "Chic & Mistique", "address": "Prote Mateje 56", "city": "Beograd - Vracar", "phone": "064 286 1551", "contact": "Nevena", "status": "Nije obiđen"}, {"id": 108, "name": "Desire", "address": "Prote Mateje 60", "city": "Beograd - Vracar", "phone": "069-79-15-20", "contact": "", "status": "Nije obiđen"}, {"id": 109, "name": "Holidey", "address": "Prote Smiljanica 51", "city": "Sabac", "phone": "066 87 608 76", "contact": "Dragana Jovanovic", "status": "Nije obiđen"}, {"id": 110, "name": "Lela Style", "address": "Puskinova", "city": "Novi Sad", "phone": "069 506 55 62", "contact": "Lela", "status": "Nije obiđen"}, {"id": 111, "name": "M2 frizerski salon", "address": "Puskinova 22", "city": "Novi Sad", "phone": "063 823 24 67", "contact": "Miroslava", "status": "Nije obiđen"}, {"id": 112, "name": "TiM frizerdski salon", "address": "Ruzveltova 1", "city": "Beograd", "phone": "063 7018 757", "contact": "", "status": "Nije obiđen"}, {"id": 113, "name": "Salon Karaburma", "address": "Salvadora Aljendea 14", "city": "Beograd - Karaburma", "phone": "064-95-59-782", "contact": "", "status": "Nije obiđen"}, {"id": 114, "name": "Salon Slavica", "address": "Slobodana Glumca 11 B", "city": "Beograd - Zemun -Altina", "phone": "064 07 14 185", "contact": "", "status": "Nije obiđen"}, {"id": 115, "name": "Hair & Beauty", "address": "Sokolska 15/2", "city": "Beograd - vracar", "phone": "065 22 99 220", "contact": "Damir Stanojevic", "status": "Nije obiđen"}, {"id": 116, "name": "Manjana", "address": "Solunska 18", "city": "Beograd - dorcol", "phone": "069-21-82-937", "contact": "", "status": "Nije obiđen"}, {"id": 117, "name": "Avangard", "address": "Stane Milanovic 9a", "city": "Šabac", "phone": "060-72-81-984", "contact": "Ana Vladušić", "status": "Nije obiđen"}, {"id": 118, "name": "Color and CUT Maja", "address": "Starca Vujadina 8", "city": "Beograd -blizu nikole heppy", "phone": "065 94 94 919", "contact": "Maja", "status": "Nije obiđen"}, {"id": 119, "name": "Frizerski Atelje Dragan", "address": "Sterijino Sokace bb Centar", "city": "Vrsac", "phone": "063 80 11 289", "contact": "", "status": "Nije obiđen"}, {"id": 120, "name": "Salon Lola", "address": "Stevana Dukića 49", "city": "Beograd- Karaburma", "phone": "069-26-24-284", "contact": "", "status": "Nije obiđen"}, {"id": 121, "name": "Studio Shine", "address": "Strahinjića Bana 22", "city": "Beograd- dorcol", "phone": "064-26-37-583", "contact": "", "status": "Nije obiđen"}, {"id": 122, "name": "Angels frizerski salon", "address": "Strumicka 49", "city": "Beograd", "phone": "061 1466634", "contact": "Marijana", "status": "Nije obiđen"}, {"id": 123, "name": "Studio Kalax", "address": "Sumadijska 23", "city": "Zemun", "phone": "", "contact": "Marija Cica", "status": "Nije obiđen"}, {"id": 124, "name": "Sanja Mary Lp", "address": "Svetozara Markovića 48", "city": "Beograd- Slavija Vracar", "phone": "064-42-82-296", "contact": "", "status": "Nije obiđen"}, {"id": 125, "name": "Milan Ančević", "address": "Takovska 13", "city": "Beograd Stari gard", "phone": "064-25-47-271", "contact": "Milan Ančević", "status": "Nije obiđen"}, {"id": 126, "name": "Studio Prostor", "address": "Terazije 5", "city": "Stari grad", "phone": "", "contact": "Jelena Jovanovic", "status": "Nije obiđen"}, {"id": 127, "name": "Markos", "address": "Tirsov venac 35/1", "city": "Šabac", "phone": "064-22-90-398", "contact": "Milijana Gogić - Marko glavni", "status": "Nije obiđen"}, {"id": 128, "name": "Son Trade DOO", "address": "Tosin bunar 30", "city": "Zemun", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 129, "name": "Beauty Studio Mary", "address": "Trg Majke Jevrosime 19", "city": "Novi Sad", "phone": "063 85 85 803", "contact": "Marina", "status": "Nije obiđen"}, {"id": 130, "name": "Ceca Enjub", "address": "Tržni centar Enjub-1.sprat", "city": "Beograd- NBG", "phone": "064-19-00-713", "contact": "Ceca", "status": "Nije obiđen"}, {"id": 131, "name": "R&b", "address": "Ugrinovacka 60", "city": "Zemun", "phone": "060 306 30 07", "contact": "Biljana i Radmila", "status": "Nije obiđen"}, {"id": 132, "name": "Salon Ubavica", "address": "ugrinovacki put 16 n", "city": "Beograd -Altina NBG zemun", "phone": "064-35-74-888", "contact": "Ankica Nuredinovski", "status": "Nije obiđen"}, {"id": 133, "name": "ICON", "address": "Urosa Martinovica 16", "city": "Beograd - NBG belvil", "phone": "069 45 25 696", "contact": "Milena Jovanovic", "status": "Nije obiđen"}, {"id": 134, "name": "Boban Ciric", "address": "Urosa Martinovica 9", "city": "Beograd - A blok NBG", "phone": "063 85 33 113", "contact": "Boban Ciric", "status": "Nije obiđen"}, {"id": 135, "name": "Šta reći", "address": "Ustanička 204a", "city": "Beograd- konjarnik", "phone": "064-24-10-236", "contact": "Mira", "status": "Nije obiđen"}, {"id": 136, "name": "Salon Golden Hair", "address": "Ustanička bb", "city": "Užice", "phone": "060-552-66-81", "contact": "Snežana Kostić", "status": "Nije obiđen"}, {"id": 137, "name": "Lazar Matic", "address": "Vase Pelagica 1", "city": "Novi Sad", "phone": "063 80 25 258", "contact": "Lazar", "status": "Nije obiđen"}, {"id": 138, "name": "Studio S", "address": "Vatroslava Jagica 8", "city": "Beograd - blizu nas", "phone": "069  48 23 077", "contact": "", "status": "Nije obiđen"}, {"id": 139, "name": "Gaga", "address": "Velizara Kosanovića 68", "city": "Beograd- konjarnik", "phone": "064-22-35-525", "contact": "", "status": "Nije obiđen"}, {"id": 140, "name": "Stash beauty", "address": "Vladimira Karica 7", "city": "Beograd -blizu juznog bul", "phone": "063 316 100", "contact": "Andjela menadzerka Nikola frizer", "status": "Nije obiđen"}, {"id": 141, "name": "Branka", "address": "Vodovodska 66", "city": "Beograd - zarkovo", "phone": "060 070 39 78", "contact": "Branka", "status": "Nije obiđen"}, {"id": 142, "name": "Salon 21", "address": "Vojislava Ilica 21", "city": "Vracar", "phone": "", "contact": "Matija Jokovic", "status": "Nije obiđen"}, {"id": 143, "name": "Salon 21", "address": "Vojislava Ilića 21", "city": "Beograd Crveni krst", "phone": "060-43-16-363", "contact": "", "status": "Nije obiđen"}, {"id": 144, "name": "MSD", "address": "Vojvode Dragomira 6", "city": "Beograd- Vracar", "phone": "064-47-25-566", "contact": "Suzana Isailovic", "status": "Nije obiđen"}, {"id": 145, "name": "Astoria", "address": "Vojvode Petka 6 lokal 1", "city": "Beograd - blizu nas", "phone": "064 165 32 12", "contact": "Sladjana Maksic", "status": "Nije obiđen"}, {"id": 146, "name": "Elite", "address": "Vojvode putnika 38", "city": "Nova Pazova", "phone": "064-24-77-143", "contact": "Radenković Snežana", "status": "Nije obiđen"}, {"id": 147, "name": "Ljubica", "address": "Vojvode Stepe 168 -", "city": "Beograd - Vozdovac", "phone": "069-249-61-41", "contact": "Ljubica", "status": "Nije obiđen"}, {"id": 148, "name": "Frizer I Barber  CROWN88", "address": "Vojvode stepe 174", "city": "Beograd - Vozdovac", "phone": "060 599 400  / 066 221 984", "contact": "Andreja I Ivan Kocic", "status": "Nije obiđen"}, {"id": 149, "name": "Olivera Zagorac", "address": "Vojvode Šupljikca 22", "city": "Novi Sad", "phone": "063-721-98-24", "contact": "Olivera Zagorac", "status": "Nije obiđen"}, {"id": 150, "name": "Toti", "address": "Vojvodjanska 414, kod skretanja", "city": "Beograd- Surcin", "phone": "065-22-61-001", "contact": "", "status": "Nije obiđen"}, {"id": 151, "name": "Green Style", "address": "Vranjska 20", "city": "Beograd- Blizu nas", "phone": "063-31-43-56", "contact": "Sanja", "status": "Nije obiđen"}, {"id": 152, "name": "Salon Marijana", "address": "Zemunska 11", "city": "Beograd - Dobanovci", "phone": "062 51 06 19", "contact": "Marijana Topolski", "status": "Nije obiđen"}, {"id": 153, "name": "Kruz", "address": "Zicka 25", "city": "Beograd -Crveni krst", "phone": "064 34 22 677", "contact": "Slavica gazdarica", "status": "Nije obiđen"}, {"id": 154, "name": "Ana Studio", "address": "Zorana Djindjica 95", "city": "Beograd-NBG", "phone": "060 555 27 34", "contact": "Ana", "status": "Nije obiđen"}, {"id": 155, "name": "Dragana B", "address": "Zorana Radmilovica 1 , prvi lokal sa leve strane preko puta Meridijana kladionice", "city": "Beograd - Mirjevo", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 156, "name": "Nevena", "address": "Žarkovo - Zdravka Jovanovica 31", "city": "Beograd Zarkovo", "phone": "060-72-10-804", "contact": "Slavica gazdarica", "status": "Nije obiđen"}, {"id": 157, "name": "Marina-Frizerski salon Mask", "address": "Žarkovo-Tržni centar Mondo", "city": "Beograd- zarkovo", "phone": "060-35-14-229", "contact": "Marina", "status": "Nije obiđen"}, {"id": 158, "name": "Salon Noa", "address": "", "city": "Beograd", "phone": "063-38-60-70", "contact": "", "status": "Nije obiđen"}, {"id": 159, "name": "Astrum", "address": "", "city": "Šabac", "phone": "064-51-50-010", "contact": "", "status": "Nije obiđen"}, {"id": 160, "name": "Ceca", "address": "", "city": "Užice", "phone": "064-19-00-713", "contact": "", "status": "Nije obiđen"}, {"id": 161, "name": "Head Office", "address": "", "city": "Vršac", "phone": "063-305-645", "contact": "Biljana", "status": "Nije obiđen"}, {"id": 162, "name": "Salon Ruža", "address": "", "city": "Užice", "phone": "064-171-88-10", "contact": "", "status": "Nije obiđen"}, {"id": 163, "name": "Hair & Makeup", "address": "", "city": "Nis", "phone": "064 898 22 60", "contact": "Vesna", "status": "Nije obiđen"}, {"id": 164, "name": "Salon Beauty Studio Majestic", "address": "", "city": "Uzice", "phone": "060 51 74 800", "contact": "Draskovic Ksenija", "status": "Nije obiđen"}, {"id": 165, "name": "Alfaparf Studio", "address": "Višnjička 84, TC Big Fashion, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 166, "name": "ANĐELA GMG", "address": "Savska 33, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 167, "name": "AURORA FRIZERSKI SALON", "address": "Bulevar doktora Zorana Đinđića 105, lokal 23, Novi Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 168, "name": "BE CUTE BY SNEŽANA", "address": "Mite Ružića 9, Zvezdara, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 169, "name": "BE YOU 011", "address": "Zaplanjska 84g, Voždovac, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 170, "name": "Beauty World", "address": "Gospodar Jovanova 50, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 171, "name": "BG PROFY", "address": "Cara Nikolaja II 70, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 172, "name": "S-LADY", "address": "Visokog Stevana 12, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 173, "name": "CAPELLI", "address": "Mike Alasa 24, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 174, "name": "COCO", "address": "Baba Višnjina 37, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 175, "name": "COSMETICS ROOM", "address": "Gospodar Jovanova 69, Dorćol, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 176, "name": "Cut & Talk", "address": "Jurija Gagarina 142, lokal 9, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 177, "name": "Cvrle Frizerski Salon – Centar", "address": "Nušićeva 7, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 178, "name": "Cvrle Frizerski Salon – Slavija", "address": "Beogradska 10, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 179, "name": "Cvrle Frizerski Salon – Slavija 2", "address": "Beogradska 6, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 180, "name": "Cvrle Frizerski Salon – Voždovac", "address": "Jove Ilića 197, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 181, "name": "DANA FRIZERSKI SALON", "address": "Luja Adamiča 26g, Novi Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 182, "name": "ENCANTO", "address": "Ratka Mitrovića 130, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 183, "name": "EUROSTYLE 2024 DOO", "address": "Nikole Dobrovića 25, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 184, "name": "FRIZER ZA ŽENE JASNA", "address": "Bulevar kralja Aleksandra 532b, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 185, "name": "FRIZERSKI SALON BAJKA", "address": "Zrenjaninski put 19a, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 186, "name": "Frizerski salon Bata", "address": "Južni bulevar 36, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 187, "name": "FRIZERSKI SALON KARITA", "address": "Bulevar Zorana Đinđića 123V, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 188, "name": "FRIZERSKI SALON MAŠA", "address": "Kirovljeva 17, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 189, "name": "FRIZERSKI SALON TI-SO", "address": "Bulevar Zorana Đinđića 199, Novi Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 190, "name": "GIOVANNI RI", "address": "Mite Ružića 20, Zvezdara, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 191, "name": "Grey 2", "address": "Knez Mihajlova 19, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 192, "name": "Hair by Danijela", "address": "Braće Miladinov 6, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 193, "name": "HAIR LAB", "address": "Jurija Gagarina 14 lj, lokal 12, Novi Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 194, "name": "Hair Studio Marina", "address": "Stojana Protića 27, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 195, "name": "HAPPY TEAM", "address": "Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 196, "name": "Jelena Janković", "address": "Doktora Dragoslava Popovića 16, lokal 7, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 197, "name": "JELENA MARINKOVIĆ", "address": "Gornjogradska 11, lokal 9, Zemun", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 198, "name": "JOVICA HAIR STYLE", "address": "Dragoslava Jovanovića 11, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 199, "name": "KOZMETIČKI SALON IVA", "address": "Šumatovačka 116, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 200, "name": "M2 HAIRSTYLING", "address": "Čubrina 1, Stari grad, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 201, "name": "Milana Hair Style", "address": "Bulevar Arsenija Čarnojevića 68/4, Novi Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 202, "name": "MINA - SLAVIJA", "address": "Svetozara Markovića 68, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 203, "name": "MN Beauty studio", "address": "Luke Ćelovića Trebinjca 50, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 204, "name": "MUŠKO-ŽENSKI FRIZER LUKA+", "address": "Marijane Gregoran 75, Karaburma, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 205, "name": "Novelle", "address": "Ljubička 16, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 206, "name": "Perfect Hair", "address": "Kosovska 5, Zemun, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 207, "name": "PICIKATO PARRUCCHIERE", "address": "Makedonska 2a, Zemun, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 208, "name": "PINK STARSS", "address": "Krajiška 59d, Zemun, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 209, "name": "PLAVUŠA", "address": "Oblakovska 28, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 210, "name": "SALON RUŽICA", "address": "Vojina Đurašinovića 1, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 211, "name": "SALON XXL", "address": "Bulevar Arsenija Čarnojevića 95, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 212, "name": "Sip&Style", "address": "Makedonska 17, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 213, "name": "Šizz Frizz", "address": "Dečanska 19, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 214, "name": "Studio OM", "address": "Petrarkina 12, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 215, "name": "STUDIO VISAGE", "address": "Molerova 25, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 216, "name": "URBAN BEAUTY", "address": "Mirijevski bulevar 18b, TC Karaburma, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}, {"id": 217, "name": "Velaris", "address": "Trgovačka 7, lokal 5, Beograd", "city": "Beograd", "phone": "", "contact": "", "status": "Nije obiđen"}];
 
 const LS = {
-  users: "route_users_v5",
-  salons: "route_salons_v5",
-  reports: "route_reports_v5",
-  daily: "route_daily_v5",
-  current: "route_current_v5",
-  coords: "route_coords_v5",
-  cycle: "route_cycle_v5"
+  users: "route_users_v6",
+  salons: "route_salons_v6",
+  reports: "route_reports_v6",
+  daily: "route_daily_v6",
+  current: "route_current_v6",
+  coords: "route_coords_v6",
+  cycle: "route_cycle_v6",
+  routeLog: "route_changes_v6"
 };
+
+const REPORT_EMAIL = "kontrolor@firma.rs";
 
 let currentUser = null;
 let selectedSalonId = 1;
@@ -244,6 +248,7 @@ function seed() {
   if (!localStorage.getItem(LS.reports)) localStorage.setItem(LS.reports, "[]");
   if (!localStorage.getItem(LS.daily)) localStorage.setItem(LS.daily, "[]");
   if (!localStorage.getItem(LS.coords)) localStorage.setItem(LS.coords, "{}");
+  if (!localStorage.getItem(LS.routeLog)) localStorage.setItem(LS.routeLog, "[]");
 }
 seed();
 
@@ -262,6 +267,8 @@ function getDailyIds() { return JSON.parse(localStorage.getItem(LS.daily) || "[]
 function setDailyIds(x) { localStorage.setItem(LS.daily, JSON.stringify(x)); }
 function getCoords() { return JSON.parse(localStorage.getItem(LS.coords) || "{}"); }
 function setCoords(x) { localStorage.setItem(LS.coords, JSON.stringify(x)); }
+function getRouteLog() { return JSON.parse(localStorage.getItem(LS.routeLog) || "[]"); }
+function setRouteLog(x) { localStorage.setItem(LS.routeLog, JSON.stringify(x)); }
 function getCycle() { return Number(localStorage.getItem(LS.cycle) || "1"); }
 function setCycle(x) { localStorage.setItem(LS.cycle, String(x)); }
 function val(id) { return document.getElementById(id).value.trim(); }
@@ -410,21 +417,26 @@ function renderWorkerRoute() {
           <h3>${esc(s.name)}</h3>
           <div class="muted">${esc(query(s))}</div>
           <div class="tiny">Tel: ${esc(s.phone || "nema")}${dist} ${s.contact ? " | Kontakt: " + esc(s.contact) : ""}</div>
-          <div style="margin-top:6px">${done ? '<span class="tag green-tag">Poseta završena</span>' : '<span class="tag blue-tag">Planiran</span>'}</div>
+          <div style="margin-top:6px">${done ? '<span class="tag green-tag">Poseta završena</span>' : '<span class="tag blue-tag">U ruti</span>'}</div>
         </div>
       </div>
       <div class="actions">
         <button class="secondary" onclick="selectSalon(${s.id})">Mapa</button>
         <button class="secondary" onclick="navigateSalon(${s.id})">Navigacija</button>
-        <button class="primary" onclick="quickVisit(${s.id})">Poseta završena</button>
+        <button class="primary" onclick="quickVisit(${s.id})">Unos posete</button>
+        <button class="secondary" onclick="moveRouteItem(${i}, -1)">Gore</button>
+        <button class="secondary" onclick="moveRouteItem(${i}, 1)">Dole</button>
+        <button class="danger" onclick="removeSalonFromRoute(${s.id})">Izbaci</button>
+        <button class="warning" onclick="skipSalon(${s.id})">Preskoči</button>
       </div>
     </div>`;
-  }).join("") || "<p class='muted'>Nema salona u ruti.</p>";
+  }).join("") || "<p class='muted'>Nema salona u ruti. Napravi rutu ili dodaj salon iz baze.</p>";
 }
 
 
 function renderAllSalonsList() {
   const q = (document.getElementById("allSalonSearch")?.value || "").toLowerCase().trim();
+  const dailyIds = new Set(getDailyRoute().map(s => s.id));
   const all = getSalons().filter(s => {
     const haystack = (s.name + " " + s.address + " " + s.city + " " + s.phone + " " + s.contact).toLowerCase();
     return !q || haystack.includes(q);
@@ -441,28 +453,142 @@ function renderAllSalonsList() {
           <h3>${esc(s.name)}</h3>
           <div class="muted">${esc(query(s))}</div>
           <div class="tiny">Tel: ${esc(s.phone || "nema")} ${s.contact ? " | Kontakt: " + esc(s.contact) : ""}</div>
+          <div style="margin-top:6px">${dailyIds.has(s.id) ? '<span class="tag green-tag">Već u ruti</span>' : '<span class="tag blue-tag">Baza salona</span>'}</div>
         </div>
       </div>
       <div class="actions">
         <button class="secondary" onclick="selectSalon(${s.id})">Učitaj mapu</button>
         <button class="primary" onclick="navigateSalon(${s.id})">Navigacija</button>
         <button class="secondary" onclick="quickVisit(${s.id})">Unos posete</button>
+        <button class="success" onclick="addSalonToRoute(${s.id})">Dodaj u rutu</button>
       </div>
     </div>
   `).join("") || "<p class='muted'>Nema rezultata.</p>";
 }
 
+
 function renderVisitSelect() {
-  const options = getDailyRoute().map(s => `<option value="${s.id}">${esc(s.name)} - ${esc(query(s))}</option>`).join("");
-  document.getElementById("visitSalon").innerHTML = options;
-  document.getElementById("visitSalon").value = selectedSalonId;
+  const route = getDailyRoute();
+  const routeIds = new Set(route.map(s => s.id));
+  const all = getSalons();
+  const routeOptions = route.map(s => `<option value="${s.id}">${esc(s.name)} - ${esc(query(s))}</option>`).join("");
+  const otherOptions = all.filter(s => !routeIds.has(s.id)).map(s => `<option value="${s.id}">${esc(s.name)} - ${esc(query(s))}</option>`).join("");
+  document.getElementById("visitSalon").innerHTML = `<optgroup label="Današnja ruta">${routeOptions}</optgroup><optgroup label="Svi saloni iz baze">${otherOptions}</optgroup>`;
+  if (selectedSalonId) document.getElementById("visitSalon").value = selectedSalonId;
+}
+
+
+function ensureManualRoute() {
+  const ids = getDailyIds();
+  if (ids.length) return ids;
+  const initial = filteredSalons().slice(0, 15).map(s => s.id);
+  setDailyIds(initial);
+  return initial;
+}
+
+function logRouteChange(action, salon) {
+  const logs = getRouteLog();
+  logs.unshift({
+    id: Date.now(),
+    date: new Date().toLocaleDateString("sr-RS"),
+    time: new Date().toLocaleTimeString("sr-RS", {hour:"2-digit", minute:"2-digit"}),
+    userId: currentUser?.id,
+    userName: currentUser?.name || "",
+    action,
+    salonName: salon?.name || "",
+    address: salon ? query(salon) : ""
+  });
+  setRouteLog(logs.slice(0, 500));
+}
+
+function addSalonToRoute(id) {
+  if (!activeCheck()) return;
+  const salon = getSalons().find(s => s.id === id);
+  if (!salon) return;
+  const ids = ensureManualRoute();
+  if (ids.includes(id)) {
+    selectedSalonId = id;
+    renderAll();
+    return alert("Salon je već u današnjoj ruti.");
+  }
+  ids.push(id);
+  setDailyIds(ids);
+  selectedSalonId = id;
+  logRouteChange("Dodat u rutu", salon);
+  renderAll();
+  alert("Salon je dodat u današnju rutu.");
+}
+
+function removeSalonFromRoute(id) {
+  if (!activeCheck()) return;
+  const salon = getSalons().find(s => s.id === id);
+  if (!confirm("Izbaciti salon iz današnje rute?")) return;
+  const ids = ensureManualRoute().filter(x => x !== id);
+  setDailyIds(ids);
+  if (selectedSalonId === id) selectedSalonId = ids[0] || getSalons()[0]?.id || 1;
+  logRouteChange("Izbačen iz rute", salon);
+  renderAll();
+}
+
+function moveRouteItem(index, direction) {
+  if (!activeCheck()) return;
+  const ids = ensureManualRoute();
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= ids.length) return;
+  const tmp = ids[index];
+  ids[index] = ids[newIndex];
+  ids[newIndex] = tmp;
+  setDailyIds(ids);
+  logRouteChange("Promenjen redosled rute", getSalons().find(s => s.id === ids[newIndex]));
+  renderAll();
+}
+
+function skipSalon(id) {
+  if (!activeCheck()) return;
+  const salon = getSalons().find(s => s.id === id);
+  const reason = prompt("Razlog preskakanja salona:", "Nije radio / nema vremena / promena plana");
+  if (reason === null) return;
+  const report = {
+    id: Date.now(),
+    userId: currentUser.id,
+    userName: currentUser.name,
+    salonId: id,
+    salonName: salon.name,
+    address: query(salon),
+    result: "Preskočen salon",
+    comment: reason || "Preskočen bez dodatnog komentara",
+    sale: "",
+    amount: 0,
+    date: new Date().toLocaleDateString("sr-RS"),
+    time: new Date().toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" }),
+    sent: false,
+    cycle: getCycle(),
+    outsideRoute: !getDailyRoute().some(s => s.id === salonId),
+    routeChanged: true
+  };
+  const reports = getReports();
+  reports.unshift(report);
+  setReports(reports);
+  if (report.outsideRoute) logRouteChange("Poseta van prvobitne rute", salon);
+  logRouteChange("Preskočen salon", salon);
+  renderAll();
+}
+
+function resetManualRoute() {
+  if (!activeCheck()) return;
+  if (!confirm("Vratiti automatski predlog rute? Ručne izmene današnje rute biće obrisane.")) return;
+  setDailyIds([]);
+  logRouteChange("Vraćen predlog rute", null);
+  renderAll();
 }
 
 function selectSalon(id) {
   selectedSalonId = id;
+  renderVisitSelect();
   document.getElementById("visitSalon").value = id;
   updateMap();
   renderWorkerRoute();
+  renderAllSalonsList();
 }
 
 function updateMap() {
@@ -641,6 +767,7 @@ function saveVisit() {
   if (!activeCheck()) return;
   const salonId = Number(document.getElementById("visitSalon").value);
   const salon = getSalons().find(s => s.id === salonId);
+  if (!salon) return alert("Izaberi salon za posetu.");
   const comment = val("visitComment");
   if (!comment) return alert("Upiši komentar posete.");
   const report = {
@@ -657,7 +784,8 @@ function saveVisit() {
     date: new Date().toLocaleDateString("sr-RS"),
     time: new Date().toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" }),
     sent: false,
-    cycle: getCycle()
+    cycle: getCycle(),
+    outsideRoute: !getDailyRoute().some(s => s.id === salonId)
   };
   const reports = getReports();
   reports.unshift(report);
@@ -675,11 +803,57 @@ function finishDay() {
   const today = new Date().toLocaleDateString("sr-RS");
   const mineToday = reports.filter(r => r.date === today && r.userId === currentUser.id);
   if (!mineToday.length) return alert("Nema sačuvanih poseta za danas.");
+
   const updated = reports.map(r => r.date === today && r.userId === currentUser.id ? {...r, sent:true, sentAt:new Date().toLocaleString("sr-RS")} : r);
   setReports(updated);
+
+  const route = getDailyRoute();
+  const routeLogs = getRouteLog().filter(l => l.date === today && l.userId === currentUser.id);
+  const total = mineToday.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+  const lines = [];
+  lines.push("DNEVNI IZVEŠTAJ - ALM DISTRIBUCIJA");
+  lines.push("Komercijalista: " + currentUser.name);
+  lines.push("Datum: " + today);
+  lines.push("Broj unetih poseta: " + mineToday.length);
+  lines.push("Promet: " + total.toLocaleString("sr-RS") + " RSD");
+  lines.push("");
+  lines.push("DANAŠNJA RUTA:");
+  route.forEach((s, i) => lines.push((i + 1) + ". " + s.name + " - " + query(s)));
+  lines.push("");
+  lines.push("POSETE:");
+  mineToday.slice().reverse().forEach((r, i) => {
+    lines.push((i + 1) + ". " + r.time + " | " + r.salonName);
+    lines.push("   Adresa: " + r.address);
+    lines.push("   Rezultat: " + r.result);
+    lines.push("   Komentar: " + r.comment);
+    if (r.sale) lines.push("   Prodato/poručeno: " + r.sale);
+    lines.push("   Promet: " + Number(r.amount || 0).toLocaleString("sr-RS") + " RSD");
+    if (r.outsideRoute) lines.push("   Napomena: poseta van prvobitne rute");
+  });
+  if (routeLogs.length) {
+    lines.push("");
+    lines.push("IZMENE RUTE:");
+    routeLogs.slice().reverse().forEach(l => lines.push(l.time + " | " + l.action + (l.salonName ? " | " + l.salonName : "")));
+  }
+
+  const body = lines.join("\n");
+  downloadTextReport(body, "dnevni_izvestaj_" + today.replaceAll(".", "-") + ".txt");
+  const subject = "Dnevni izveštaj - " + currentUser.name + " - " + today;
+  window.location.href = "mailto:" + encodeURIComponent(REPORT_EMAIL) + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   renderAll();
-  alert("Dnevni izveštaj je poslat kontroloru.");
+  alert("Izveštaj je sačuvan u aplikaciji, preuzet kao TXT fajl i otvoren je email klijent za slanje kontroloru.");
 }
+
+function downloadTextReport(text, filename) {
+  const blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 
 function renderManagerReports() {
   const reports = getReports();
@@ -697,7 +871,7 @@ function renderManagerReports() {
           <td>${esc(r.date)} ${esc(r.time)}<br><span class="tiny">${r.sent ? "Poslat" : "Nije završen dan"}</span></td>
           <td>${esc(r.userName)}</td>
           <td>${esc(r.salonName)}<br><span class="tiny">${esc(r.address)}</span></td>
-          <td>${esc(r.result)}</td>
+          <td>${esc(r.result)}${r.outsideRoute ? '<br><span class="tag blue-tag">Van rute</span>' : ''}</td>
           <td>${esc(r.comment)}<br><span class="tiny">${esc(r.sale || "")}</span></td>
           <td>${Number(r.amount || 0).toLocaleString("sr-RS")}</td>
         </tr>`).join("")}
@@ -709,8 +883,8 @@ function renderManagerReports() {
 function exportReports() {
   const reports = getReports();
   if (!reports.length) return alert("Nema izveštaja za preuzimanje.");
-  const header = ["Datum","Vreme","Zaposleni","Salon","Adresa","Rezultat","Komentar","Prodato","Promet","Poslat"];
-  const rows = reports.map(r => [r.date,r.time,r.userName,r.salonName,r.address,r.result,r.comment,r.sale,r.amount,r.sent ? "DA" : "NE"]);
+  const header = ["Datum","Vreme","Zaposleni","Salon","Adresa","Rezultat","Komentar","Prodato","Promet","Poslat","Van rute"];
+  const rows = reports.map(r => [r.date,r.time,r.userName,r.salonName,r.address,r.result,r.comment,r.sale,r.amount,r.sent ? "DA" : "NE", r.outsideRoute ? "DA" : "NE"]);
   const csv = [header, ...rows].map(row => row.map(v => `"${String(v || "").replaceAll('"','""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
